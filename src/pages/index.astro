@@ -1,0 +1,108 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import PostCard from '../components/PostCard.astro';
+import ProjectCard from '../components/ProjectCard.astro';
+import { getCollection } from 'astro:content';
+import { site } from '../lib/site';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+  .slice(0, 3);
+
+const projects = (await getCollection('projects'))
+  .filter((p) => p.data.featured)
+  .sort((a, b) => a.data.order - b.data.order)
+  .slice(0, 3);
+---
+
+<BaseLayout>
+  <Hero />
+
+  <div class="page">
+    <section class="intro">
+      <p>
+        I'm <strong>{site.name}</strong>, a {site.role} based in {site.location}.
+        I design and ship production AI systems: LLM pipelines, multi-agent workflows,
+        and the evaluation harnesses that keep them honest. My background is a PhD in AI
+        and 6+ years across research and industry.
+      </p>
+    </section>
+
+    <section class="block">
+      <header class="block-head">
+        <h2>Latest writing</h2>
+        <a href="/blog" class="all">All posts →</a>
+      </header>
+      <div class="post-list">
+        {posts.map((p) => <PostCard post={p} />)}
+        {posts.length === 0 && <p class="muted">No posts yet. Check back soon.</p>}
+      </div>
+    </section>
+
+    <section class="block">
+      <header class="block-head">
+        <h2>Featured projects</h2>
+        <a href="/projects" class="all">All projects →</a>
+      </header>
+      <div class="project-grid">
+        {projects.map((p) => <ProjectCard project={p} />)}
+      </div>
+    </section>
+
+    <section class="block contact">
+      <h2>Get in touch</h2>
+      <p>
+        Open to interesting AI/ML problems and collaborations. Reach me on
+        <a href={site.socials.linkedin} target="_blank" rel="noopener">LinkedIn</a>,
+        <a href={site.socials.github} target="_blank" rel="noopener">GitHub</a>, or
+        <a href={`mailto:${site.email}`}>{site.email}</a>.
+      </p>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .intro {
+    max-width: var(--content-width);
+    margin: 0 auto var(--space-16);
+    font-size: var(--fs-md);
+    color: var(--fg);
+    text-align: center;
+  }
+  .intro strong { color: var(--fg); font-weight: 600; }
+
+  .block { margin: var(--space-16) 0; }
+
+  .block-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: var(--space-3);
+    margin-bottom: var(--space-6);
+  }
+  .block-head h2 { font-size: var(--fs-xl); }
+  .all {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--fg-muted);
+    border-bottom: none;
+  }
+  .all:hover { color: var(--accent); }
+
+  .post-list { display: flex; flex-direction: column; }
+
+  .project-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-4);
+  }
+  @media (min-width: 720px) {
+    .project-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .muted { color: var(--fg-muted); }
+
+  .contact h2 { font-size: var(--fs-xl); margin-bottom: var(--space-3); }
+</style>

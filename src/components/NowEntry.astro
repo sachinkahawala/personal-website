@@ -1,0 +1,38 @@
+---
+interface Props {
+  date: Date;
+  title?: string;
+}
+const { date, title } = Astro.props;
+const dateStr = date.toISOString().slice(0, 10);
+---
+
+<article class="entry">
+  <header>
+    <time datetime={dateStr}>{dateStr}</time>
+    {title && <h3>{title}</h3>}
+  </header>
+  <div class="body"><slot /></div>
+</article>
+
+<style>
+  .entry {
+    border-top: 1px solid var(--border);
+    padding: var(--space-6) 0;
+  }
+  .entry:first-of-type { border-top: 0; padding-top: 0; }
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-4);
+    margin-bottom: var(--space-3);
+  }
+  time {
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    color: var(--accent);
+  }
+  h3 { font-size: var(--fs-lg); margin: 0; }
+  .body :global(p) { margin: var(--space-2) 0; color: var(--fg); line-height: 1.6; }
+  .body :global(strong) { color: var(--fg); font-weight: 600; }
+</style>

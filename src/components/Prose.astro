@@ -1,0 +1,97 @@
+---
+// Typography wrapper for MDX content. Owns post-body styles.
+---
+
+<div class="prose">
+  <slot />
+</div>
+
+<style is:global>
+  .prose {
+    max-width: var(--content-width);
+    font-size: var(--fs-md);
+    line-height: var(--lh-base);
+    color: var(--fg);
+  }
+
+  .prose > * + * { margin-top: var(--space-4); }
+  .prose > * + h2 { margin-top: var(--space-12); }
+  .prose > * + h3 { margin-top: var(--space-8); }
+
+  .prose h2 { font-size: var(--fs-2xl); }
+  .prose h3 { font-size: var(--fs-xl); }
+  .prose h4 { font-size: var(--fs-lg); }
+
+  .prose p { color: var(--fg); }
+
+  .prose a {
+    color: var(--accent);
+    border-bottom: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  }
+  .prose a:hover { border-bottom-color: currentColor; }
+
+  .prose ul, .prose ol {
+    padding-left: 1.4em;
+    margin: 0;
+  }
+  .prose li + li { margin-top: var(--space-2); }
+  .prose li::marker { color: var(--fg-subtle); }
+
+  .prose strong { color: var(--fg); font-weight: 600; }
+  .prose em { color: var(--fg); }
+
+  .prose blockquote {
+    border-left: 3px solid var(--accent);
+    padding: var(--space-2) var(--space-4);
+    margin: 0;
+    color: var(--fg-muted);
+    background: var(--bg-elevated);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  }
+
+  .prose hr {
+    border: 0;
+    border-top: 1px solid var(--border);
+    margin: var(--space-8) 0;
+  }
+
+  .prose img, .prose figure {
+    margin: var(--space-6) 0;
+    border-radius: var(--radius-md);
+  }
+
+  .prose figcaption {
+    font-size: var(--fs-sm);
+    color: var(--fg-muted);
+    text-align: center;
+    margin-top: var(--space-2);
+  }
+
+  .prose pre {
+    margin: var(--space-4) 0;
+  }
+
+  .prose table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--fs-sm);
+    margin: var(--space-6) 0;
+  }
+  .prose th, .prose td {
+    text-align: left;
+    padding: var(--space-2) var(--space-3);
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .prose th {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid var(--border-strong);
+  }
+  .prose td code, .prose th code {
+    font-size: 0.9em;
+  }
+</style>

@@ -1,0 +1,34 @@
+- id: graph-vfa-2025
+  title: Graph Vector Function Architecture
+  authors: ["Sachin Kahawala", "et al."]
+  venue: Neural Networks
+  year: 2025
+  links: {}
+
+- id: hypervector-smart-cities-2024
+  title: Hypervector Approximation of Complex Manifolds in Smart City Internet of Things Infrastructure
+  authors: ["Sachin Kahawala", "et al."]
+  venue: Smart Cities 7(6), 131
+  year: 2024
+  links: {}
+
+- id: hyperseed-tnnls-2022
+  title: "Hyperseed: Unsupervised Learning With Vector Symbolic Architectures"
+  authors: ["Evgeny Osipov", "Sachin Kahawala", "et al."]
+  venue: IEEE Transactions on Neural Networks and Learning Systems
+  year: 2022
+  links: {}
+
+- id: electricity-markets-2021
+  title: Robust Multi-Step Predictor for Electricity Markets with Real-Time Pricing
+  authors: ["Sachin Kahawala", "et al."]
+  venue: Energies 14(14)
+  year: 2021
+  links: {}
+
+- id: road-surveillance-tii-2021
+  title: A Generative Latent Space Approach for Real-Time Road Surveillance in Smart Cities
+  authors: ["Rashmika Nawaratne", "Sachin Kahawala", "et al."]
+  venue: IEEE Transactions on Industrial Informatics 17(7), 4872-4881
+  year: 2021
+  links: {}

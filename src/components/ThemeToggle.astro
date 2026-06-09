@@ -1,0 +1,63 @@
+---
+import { Icon } from 'astro-icon/components';
+---
+
+<button
+  id="theme-toggle"
+  class="theme-toggle"
+  type="button"
+  aria-label="Toggle color theme"
+  title="Toggle theme (light / dark)"
+>
+  <Icon name="lucide:sun" class="icon icon-sun" aria-hidden="true" />
+  <Icon name="lucide:moon" class="icon icon-moon" aria-hidden="true" />
+  <Icon name="lucide:monitor" class="icon icon-system" aria-hidden="true" />
+</button>
+
+<style>
+  .theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--fg-muted);
+    transition: color var(--transition), border-color var(--transition), background var(--transition);
+  }
+
+  .theme-toggle:hover {
+    color: var(--fg);
+    border-color: var(--border-strong);
+    background: var(--bg-elevated);
+  }
+
+  .icon {
+    width: 18px;
+    height: 18px;
+    display: none;
+  }
+
+  :global(:root[data-theme-pref='light']) .theme-toggle .icon-sun { display: block; }
+  :global(:root[data-theme-pref='dark']) .theme-toggle .icon-moon { display: block; }
+  :global(:root[data-theme-pref='system']) .theme-toggle .icon-system { display: block; }
+</style>
+
+<script is:inline>
+  (() => {
+    const bind = () => {
+      const btn = document.getElementById('theme-toggle');
+      if (!btn || btn.dataset.bound === '1') return;
+      btn.dataset.bound = '1';
+      btn.addEventListener('click', () => {
+        const effective = document.documentElement.getAttribute('data-theme');
+        const next = effective === 'dark' ? 'light' : 'dark';
+        localStorage.setItem('theme', next);
+        window.__applyTheme();
+      });
+    };
+    bind();
+    document.addEventListener('astro:page-load', bind);
+  })();
+</script>

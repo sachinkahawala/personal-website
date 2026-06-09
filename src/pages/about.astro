@@ -1,0 +1,244 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { Icon } from 'astro-icon/components';
+import { site } from '../lib/site';
+
+const skills = [
+  { group: 'LLM', items: ['LangChain', 'LangGraph', 'LlamaIndex', 'DeepEval', 'OpenAI GPTx', 'Azure OpenAI', 'Gemini', 'Hugging Face', 'DSPy', 'Semantic Kernel'] },
+  { group: 'Programming', items: ['Python', 'C++', 'R', 'TypeScript'] },
+  { group: 'ML / DL', items: ['PyTorch', 'Scikit-learn', 'TensorFlow', 'XGBoost'] },
+  { group: 'Web / API', items: ['Flask', 'FastAPI', 'React'] },
+  { group: 'Data / BI', items: ['Power BI', 'Tableau'] },
+  { group: 'MLOps / CI-CD', items: ['MLFlow', 'GitHub Actions', 'Azure DevOps', 'Git'] },
+  { group: 'Cloud', items: ['Azure', 'GCP', 'AWS'] },
+  { group: 'AI platforms', items: ['Azure ML', 'Microsoft Foundry', 'Vertex AI', 'Databricks'] },
+  { group: 'Databases', items: ['SQL', 'NoSQL', 'Redis', 'Cosmos DB'] },
+  { group: 'Infra', items: ['Docker', 'Container Apps', 'Service Bus'] },
+];
+
+const experience = [
+  { role: 'Senior Data Scientist & AI Architect', org: 'PS Hummingbird', loc: 'Melbourne, AU', when: 'Jan 2026 - Present' },
+  { role: 'Data Scientist & AI Architect', org: 'PS Hummingbird', loc: 'Melbourne, AU', when: 'Oct 2024 - Dec 2025' },
+  { role: 'Data Scientist', org: 'Centre for Data Analytics & Cognition, La Trobe University', loc: 'Melbourne, AU', when: 'Sep 2020 - Sep 2024' },
+  { role: 'Doctoral Candidate', org: 'La Trobe University', loc: 'Melbourne, AU', when: 'May 2021 - Jul 2024' },
+  { role: 'Research Collaborator', org: 'Luleå University of Technology (with Intel)', loc: 'Luleå, Sweden', when: 'Sep 2020 - Jun 2024' },
+  { role: 'Postgraduate Tutor', org: 'La Trobe University', loc: 'Melbourne, AU', when: 'Jun 2022 - Jan 2024' },
+  { role: 'Research Assistant (intern)', org: 'Zeptolytics (Pvt) Ltd', loc: 'Sri Lanka', when: 'Jul 2018 - Jan 2019' },
+];
+
+const education = [
+  { degree: 'PhD in Artificial Intelligence', org: 'La Trobe University, Australia', when: '2021 - 2024' },
+  { degree: 'B.Sc. (Hons) Computer Science and Engineering', org: 'University of Moratuwa, Sri Lanka', when: '2015 - 2019' },
+  { degree: 'GCE Advanced Level', org: 'Dharmaraja College, Sri Lanka. Ranked 18th (top 0.03%) in Physical Science.', when: '2014' },
+];
+
+const awards = [
+  'Amazon ML Summer School, Participant (2024)',
+  'IEEEXtreme v17.0, Country rank 5th, Global 355th (2023)',
+  'National Patent: Method and Apparatus for Detecting Surface Defects (2022)',
+  'IEEEXtreme v11.0, Country rank 10th, Global 201st (2017)',
+  'IEEEXtreme v10.0, Country rank 6th, Global 181st (2016)',
+];
+---
+
+<BaseLayout title="About" description={`About ${site.name}, ${site.role}.`}>
+  <div class="page prose-width" style="margin-inline: auto;">
+    <header class="hero">
+      <p class="kicker">about</p>
+      <h1>{site.name}</h1>
+      <p class="lede">{site.role} based in {site.location}.</p>
+    </header>
+
+    <section class="bio">
+      <p>
+        I'm a Data Scientist and AI Engineer with 6+ years of experience and a PhD in Artificial Intelligence.
+        I design, build, and ship AI and machine learning systems across research and industry, spanning
+        generative AI, deep learning, forecasting, and computer vision.
+      </p>
+      <p>
+        I'm comfortable end-to-end: rapid prototyping, experimentation, and production deployment on cloud
+        platforms, with a track record of delivering reliable, measurable outcomes on complex,
+        data-intensive problems. My algorithmic foundation comes from years of competitive programming.
+      </p>
+      <p>
+        Currently leading the design and delivery of production AI systems at <strong>PS Hummingbird</strong>,
+        with a focus on LLM pipelines, multi-agent workflows, and the evaluation infrastructure that makes
+        them safe to ship.
+      </p>
+    </section>
+
+    <section>
+      <h2>Skills</h2>
+      <div class="skills">
+        {skills.map((g) => (
+          <div class="skill-group">
+            <h4>{g.group}</h4>
+            <ul>
+              {g.items.map((it) => <li>{it}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section>
+      <h2>Experience</h2>
+      <ol class="timeline">
+        {experience.map((e) => (
+          <li>
+            <div class="when">{e.when}</div>
+            <div class="what">
+              <div class="role">{e.role}</div>
+              <div class="org">{e.org} · {e.loc}</div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section>
+      <h2>Education</h2>
+      <ul class="plain">
+        {education.map((e) => (
+          <li>
+            <strong>{e.degree}</strong>, {e.org}
+            <span class="when-inline">{e.when}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section>
+      <h2>Awards & achievements</h2>
+      <ul class="plain">
+        {awards.map((a) => <li>{a}</li>)}
+      </ul>
+    </section>
+
+    <section class="cv-cta">
+      <a href="/cv.pdf" target="_blank" rel="noopener" download class="cv-btn">
+        <Icon name="lucide:download" /> Download CV (PDF)
+      </a>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .hero { margin-bottom: var(--space-12); }
+  .kicker {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: var(--space-2);
+  }
+  h1 { font-size: var(--fs-3xl); margin-bottom: var(--space-2); }
+  .lede { color: var(--fg-muted); font-size: var(--fs-md); }
+
+  section { margin-top: var(--space-16); }
+  section h2 {
+    font-size: var(--fs-xl);
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .bio p { margin-top: var(--space-4); line-height: 1.7; }
+  .bio p:first-child { margin-top: 0; }
+  .bio strong { color: var(--fg); }
+
+  .skills {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-6);
+  }
+  @media (min-width: 720px) {
+    .skills { grid-template-columns: repeat(2, 1fr); }
+  }
+  .skill-group h4 {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-subtle);
+    margin: 0 0 var(--space-3);
+  }
+  .skill-group ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .skill-group li {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 3px 8px;
+  }
+
+  .timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .timeline li {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .timeline li:last-child { border-bottom: 0; }
+  .when {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-subtle);
+  }
+  .role { font-weight: 600; color: var(--fg); }
+  .org { color: var(--fg-muted); font-size: var(--fs-sm); margin-top: 2px; }
+  @media (min-width: 720px) {
+    .timeline li { grid-template-columns: 180px 1fr; gap: var(--space-4); }
+  }
+
+  .plain {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .plain li {
+    padding: var(--space-3) 0;
+    border-bottom: 1px solid var(--border);
+    color: var(--fg);
+  }
+  .plain li:last-child { border-bottom: 0; }
+  .plain strong { color: var(--fg); font-weight: 600; }
+  .when-inline {
+    float: right;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-subtle);
+  }
+
+  .cv-cta { text-align: center; margin-top: var(--space-16); }
+  .cv-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: var(--accent);
+    color: var(--accent-fg);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    border-radius: var(--radius-sm);
+    border-bottom: 0;
+    transition: opacity var(--transition);
+  }
+  .cv-btn:hover { opacity: 0.85; border-bottom: 0; }
+  .cv-btn :global(svg) { width: 16px; height: 16px; }
+</style>

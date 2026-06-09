@@ -1,0 +1,100 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Prose from '../../components/Prose.astro';
+import { getCollection, render } from 'astro:content';
+
+export async function getStaticPaths() {
+  const projects = await getCollection('projects');
+  return projects.map((project) => ({ params: { slug: project.id }, props: { project } }));
+}
+
+const { project } = Astro.props;
+const { Content } = await render(project);
+const { title, role, client, period, stack, outcome } = project.data;
+---
+
+<BaseLayout title={title} description={outcome}>
+  <article class="page prose-width" style="margin-inline: auto;">
+    <header class="head">
+      <p class="kicker"><a href="/projects">projects</a></p>
+      <h1>{title}</h1>
+      <ul class="facts">
+        <li><span class="k">Role</span><span class="v">{role}</span></li>
+        {client && <li><span class="k">Client</span><span class="v">{client}</span></li>}
+        <li><span class="k">Period</span><span class="v">{period}</span></li>
+      </ul>
+      <p class="outcome">{outcome}</p>
+    </header>
+
+    <Prose>
+      <Content />
+    </Prose>
+
+    {stack.length > 0 && (
+      <section class="stack-section">
+        <h3>Stack</h3>
+        <ul class="stack">
+          {stack.map((s) => <li>{s}</li>)}
+        </ul>
+      </section>
+    )}
+  </article>
+</BaseLayout>
+
+<style>
+  .head { margin-bottom: var(--space-8); }
+  .kicker { font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--space-2); }
+  .kicker a { color: var(--accent); border-bottom: none; }
+  h1 { font-size: var(--fs-3xl); margin-bottom: var(--space-4); line-height: 1.15; }
+
+  .facts {
+    list-style: none;
+    padding: var(--space-3) var(--space-4);
+    margin: 0 0 var(--space-4);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2) var(--space-6);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+  }
+  .facts .k { color: var(--fg-subtle); margin-right: var(--space-2); text-transform: uppercase; letter-spacing: 0.06em; }
+  .facts .v { color: var(--fg); }
+
+  .outcome {
+    font-size: var(--fs-md);
+    color: var(--fg);
+    line-height: 1.5;
+    padding-left: var(--space-3);
+    border-left: 3px solid var(--accent);
+  }
+
+  .stack-section { margin-top: var(--space-12); padding-top: var(--space-6); border-top: 1px solid var(--border); }
+  .stack-section h3 {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--fg-subtle);
+    margin-bottom: var(--space-3);
+  }
+  .stack {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .stack li {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 3px 8px;
+  }
+</style>

@@ -1,0 +1,83 @@
+---
+import '../styles/global.css';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import { ClientRouter } from 'astro:transitions';
+import { site } from '../lib/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  ogImage?: string;
+  noIndex?: boolean;
+}
+
+const {
+  title,
+  description = site.description,
+  ogImage = '/og-default.png',
+  noIndex = false,
+} = Astro.props;
+
+const fullTitle = title ? `${title} · ${site.name}` : `${site.name} · ${site.role}`;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? site.url).toString();
+const ogUrl = new URL(ogImage, Astro.site ?? site.url).toString();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="generator" content={Astro.generator} />
+
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noIndex && <meta name="robots" content="noindex" />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogUrl} />
+
+    <link rel="alternate" type="application/rss+xml" title={`${site.name} · Writing`} href="/rss.xml" />
+
+    <ClientRouter fallback="swap" />
+
+    {/* No-flash theme script. Must run before paint. */}
+    <script is:inline>
+      (() => {
+        const root = document.documentElement;
+        const apply = () => {
+          const pref = localStorage.getItem('theme') || 'system';
+          const sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const effective = pref === 'system' ? (sysDark ? 'dark' : 'light') : pref;
+          root.setAttribute('data-theme', effective);
+          root.setAttribute('data-theme-pref', pref);
+        };
+        window.__applyTheme = apply;
+        apply();
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+          if ((localStorage.getItem('theme') || 'system') === 'system') apply();
+        });
+        document.addEventListener('astro:after-swap', apply);
+      })();
+    </script>
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <SiteHeader />
+    <main id="main">
+      <slot />
+    </main>
+    <SiteFooter />
+  </body>
+</html>

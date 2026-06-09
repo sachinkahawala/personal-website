@@ -1,0 +1,39 @@
+---
+interface Props {
+  tag: string;
+  href?: string;
+  size?: 'sm' | 'md';
+}
+const { tag, href, size = 'md' } = Astro.props;
+const Element = href ? 'a' : 'span';
+---
+
+<Element
+  class:list={['pill', `size-${size}`]}
+  {...href ? { href } : {}}
+>
+  <span class="hash">#</span>{tag}
+</Element>
+
+<style>
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 1px;
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    border-bottom: 1px solid var(--border);
+    line-height: 1.5;
+  }
+  a.pill:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .size-sm { font-size: 0.7rem; padding: 1px 6px; }
+  .hash { color: var(--fg-subtle); margin-right: 2px; }
+</style>

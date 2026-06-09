@@ -1,0 +1,104 @@
+---
+import { Icon } from 'astro-icon/components';
+
+interface Props {
+  paper: {
+    title: string;
+    authors: string[];
+    venue: string;
+    year: number;
+    links?: { pdf?: string; doi?: string; scholar?: string };
+  };
+  myName?: string;
+}
+const { paper, myName = 'Sachin Kahawala' } = Astro.props;
+---
+
+<article class="paper">
+  <div class="badge">
+    <span class="venue">{paper.venue}</span>
+    <span class="year">{paper.year}</span>
+  </div>
+  <h3 class="title">{paper.title}</h3>
+  <p class="authors">
+    {paper.authors.map((a, i) => (
+      <>
+        {a === myName ? <strong>{a}</strong> : a}{i < paper.authors.length - 1 && <span>, </span>}
+      </>
+    ))}
+  </p>
+  {paper.links && (paper.links.pdf || paper.links.doi || paper.links.scholar) && (
+    <div class="links">
+      {paper.links.pdf && (
+        <a href={paper.links.pdf} target="_blank" rel="noopener">
+          <Icon name="lucide:file-text" /> PDF
+        </a>
+      )}
+      {paper.links.doi && (
+        <a href={paper.links.doi} target="_blank" rel="noopener">
+          <Icon name="lucide:link" /> DOI
+        </a>
+      )}
+      {paper.links.scholar && (
+        <a href={paper.links.scholar} target="_blank" rel="noopener">
+          <Icon name="lucide:graduation-cap" /> Scholar
+        </a>
+      )}
+    </div>
+  )}
+</article>
+
+<style>
+  .paper {
+    border-bottom: 1px solid var(--border);
+    padding: var(--space-6) 0;
+  }
+  .paper:last-child { border-bottom: 0; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-subtle);
+    margin-bottom: var(--space-2);
+  }
+  .venue {
+    color: var(--fg-muted);
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+  }
+  .year { color: var(--fg-subtle); }
+
+  .title {
+    font-size: var(--fs-lg);
+    margin-bottom: var(--space-2);
+    line-height: 1.35;
+  }
+
+  .authors {
+    color: var(--fg-muted);
+    margin-bottom: var(--space-3);
+    font-size: var(--fs-sm);
+  }
+  .authors strong { color: var(--fg); }
+
+  .links {
+    display: inline-flex;
+    gap: var(--space-4);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+  }
+  .links a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--fg-muted);
+    border-bottom: none;
+  }
+  .links a :global(svg) { width: 14px; height: 14px; }
+  .links a:hover { color: var(--accent); }
+</style>

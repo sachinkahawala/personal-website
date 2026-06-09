@@ -1,0 +1,27 @@
+{
+  "name": "",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && pagefind --site dist",
+    "preview": "astro preview",
+    "astro": "astro",
+    "copy-cv": "cp source_docs/*.pdf public/cv.pdf 2>/dev/null || echo 'No CV PDF found in source_docs/'"
+  },
+  "dependencies": {
+    "@astrojs/mdx": "^6.0.2",
+    "@astrojs/rss": "^4.0.18",
+    "@astrojs/sitemap": "^3.7.3",
+    "@fontsource-variable/inter": "^5.2.8",
+    "@fontsource-variable/jetbrains-mono": "^5.2.8",
+    "@iconify-json/lucide": "^1.2.111",
+    "astro": "^6.4.4",
+    "astro-icon": "^1.1.5",
+    "pagefind": "^1.5.2",
+    "sharp": "^0.34.5"
+  }
+}

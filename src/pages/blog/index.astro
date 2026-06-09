@@ -1,0 +1,134 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import PostCard from '../../components/PostCard.astro';
+import TagPill from '../../components/TagPill.astro';
+import { getCollection } from 'astro:content';
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft))
+  .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+const groupedByYear: Record<string, typeof posts> = {};
+for (const p of posts) {
+  const y = p.data.pubDate.getUTCFullYear().toString();
+  (groupedByYear[y] ??= []).push(p);
+}
+const years = Object.keys(groupedByYear).sort((a, b) => Number(b) - Number(a));
+
+const allTags = Array.from(new Set(posts.flatMap((p) => p.data.tags))).sort();
+---
+
+<BaseLayout title="Writing" description="Notes on AI systems, research, and engineering.">
+  <div class="page prose-width" style="margin-inline: auto;">
+    <header class="hero">
+      <p class="kicker">writing</p>
+      <h1>Notes</h1>
+      <p class="lede">Notes on AI systems, research, and engineering. {posts.length} posts so far.</p>
+    </header>
+
+    <div class="controls">
+      <input
+        id="search"
+        type="search"
+        placeholder="Search posts…"
+        aria-label="Search posts"
+      />
+      {allTags.length > 0 && (
+        <div class="tags">
+          {allTags.map((t) => <TagPill tag={t} href={`/blog/tags/${t}`} size="sm" />)}
+        </div>
+      )}
+    </div>
+
+    <div id="results">
+      {years.map((y) => (
+        <section class="year-block">
+          <h2 class="year">{y}</h2>
+          <div class="post-list">
+            {groupedByYear[y].map((p) => <PostCard post={p} />)}
+          </div>
+        </section>
+      ))}
+      {posts.length === 0 && <p class="muted">No posts yet.</p>}
+    </div>
+  </div>
+
+  <script>
+    // Client-side filter. In dev, falls back to a simple in-page text filter.
+    // In production, Pagefind index is built into /pagefind/ and provides full-text search.
+    const input = document.getElementById('search') as HTMLInputElement | null;
+    const results = document.getElementById('results');
+    if (input && results) {
+      let pagefind: any = null;
+      const tryLoadPagefind = async () => {
+        try {
+          // Built by pagefind CLI after astro build; doesn't exist in dev.
+          // The /* @vite-ignore */ + assembled URL keeps Vite from trying to resolve it.
+          const url = '/pagefind/pagefind' + '.js';
+          // @ts-ignore
+          pagefind = await import(/* @vite-ignore */ url);
+          await pagefind.options({ baseUrl: '/' });
+        } catch {
+          pagefind = null; // dev / no index
+        }
+      };
+      tryLoadPagefind();
+
+      const articles = Array.from(results.querySelectorAll<HTMLElement>('article'));
+      const byHref = new Map<string, HTMLElement>();
+      for (const a of articles) {
+        const link = a.querySelector('a')?.getAttribute('href');
+        if (link) byHref.set(link.replace(/\/$/, ''), a);
+      }
+
+      const filter = async (q: string) => {
+        if (!q) {
+          articles.forEach((a) => (a.style.display = ''));
+          return;
+        }
+        if (pagefind) {
+          const search = await pagefind.search(q);
+          const matches = new Set(
+            (await Promise.all(search.results.map((r: any) => r.data()))).map((d: any) =>
+              d.url.replace(/\/$/, '')
+            )
+          );
+          articles.forEach((a) => {
+            const href = a.querySelector('a')?.getAttribute('href')?.replace(/\/$/, '') ?? '';
+            a.style.display = matches.has(href) ? '' : 'none';
+          });
+        } else {
+          const lo = q.toLowerCase();
+          articles.forEach((a) => {
+            a.style.display = (a.textContent ?? '').toLowerCase().includes(lo) ? '' : 'none';
+          });
+        }
+      };
+
+      input.addEventListener('input', () => filter(input.value.trim()));
+    }
+  </script>
+</BaseLayout>
+
+<style>
+  .hero { margin-bottom: var(--space-8); }
+  .kicker { font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: var(--space-2); }
+  h1 { font-size: var(--fs-3xl); margin-bottom: var(--space-2); }
+  .lede { color: var(--fg-muted); font-size: var(--fs-md); }
+
+  .controls { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-8); }
+  #search { width: 100%; font-family: var(--font-mono); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  .year-block + .year-block { margin-top: var(--space-12); }
+  .year {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-subtle);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: var(--space-2);
+    margin-bottom: var(--space-2);
+  }
+  .muted { color: var(--fg-muted); }
+</style>

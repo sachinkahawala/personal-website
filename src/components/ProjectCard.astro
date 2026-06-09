@@ -1,0 +1,87 @@
+---
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: CollectionEntry<'projects'>;
+}
+const { project } = Astro.props;
+const { title, role, period, stack, outcome } = project.data;
+---
+
+<article class="card">
+  <a href={`/projects/${project.id}`} class="link">
+    <header>
+      <h3 class="title">{title}</h3>
+      <p class="role">
+        <span class="mono">{role}</span>
+        <span class="dot">·</span>
+        <span class="mono muted">{period}</span>
+      </p>
+    </header>
+    <p class="outcome">{outcome}</p>
+    <ul class="stack">
+      {stack.slice(0, 6).map((s) => <li>{s}</li>)}
+      {stack.length > 6 && <li class="more">+{stack.length - 6}</li>}
+    </ul>
+  </a>
+</article>
+
+<style>
+  .card {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: var(--space-6);
+    transition: border-color var(--transition), transform var(--transition);
+    height: 100%;
+  }
+  .card:hover {
+    border-color: var(--border-strong);
+  }
+
+  .link { display: block; color: inherit; border-bottom: 0; height: 100%; }
+
+  .title {
+    font-size: var(--fs-lg);
+    margin-bottom: var(--space-2);
+    transition: color var(--transition);
+  }
+  .link:hover .title { color: var(--accent); }
+
+  .role {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    margin: 0 0 var(--space-4);
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+  .role .muted { color: var(--fg-subtle); }
+  .role .dot { color: var(--fg-subtle); }
+
+  .outcome {
+    color: var(--fg);
+    margin-bottom: var(--space-4);
+    line-height: 1.5;
+  }
+
+  .stack {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .stack li {
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-muted);
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+  }
+  .stack li.more { color: var(--fg-subtle); }
+</style>

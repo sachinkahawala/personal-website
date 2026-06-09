@@ -1,0 +1,104 @@
+---
+import { site } from '../lib/site';
+---
+
+<section class="hero">
+  <div class="terminal" role="img" aria-label="Terminal-style intro panel">
+    <div class="titlebar">
+      <span class="dot dot-r"></span>
+      <span class="dot dot-y"></span>
+      <span class="dot dot-g"></span>
+      <span class="title">sachin@melbourne:~</span>
+    </div>
+    <div class="screen">
+      <p><span class="prompt">$</span> whoami</p>
+      <p class="out"><span class="arrow">→</span> {site.name} &middot; {site.role}</p>
+      <p>&nbsp;</p>
+      <p><span class="prompt">$</span> cat about.md</p>
+      <p class="out">PhD in AI. Ship LLM + ML systems at PS Hummingbird.</p>
+      <p class="out">Based in {site.location.split(',')[0]}.</p>
+      <p>&nbsp;</p>
+      <p><span class="prompt">$</span> ls ~/</p>
+      <p class="out paths">
+        <a href="/about">about/</a>
+        <a href="/blog">blog/</a>
+        <a href="/projects">projects/</a>
+        <a href="/papers">papers/</a>
+        <a href="/cv.pdf" target="_blank" rel="noopener">cv.pdf</a>
+      </p>
+      <p class="cursor"><span class="prompt">$</span> <span class="caret">▍</span></p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding: var(--space-12) 0 var(--space-8);
+  }
+
+  .terminal {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .titlebar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-4);
+    background: var(--bg-code);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-mono);
+    font-size: var(--fs-xs);
+    color: var(--fg-subtle);
+  }
+
+  .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
+  .dot-r { background: #ff5f57; }
+  .dot-y { background: #febc2e; }
+  .dot-g { background: #28c840; }
+  .title { margin-left: var(--space-3); }
+
+  .screen {
+    padding: var(--space-6);
+    font-family: var(--font-mono);
+    font-size: var(--fs-sm);
+    line-height: 1.7;
+    color: var(--fg);
+  }
+
+  .screen p { margin: 0; }
+  .out { color: var(--fg-muted); padding-left: var(--space-3); }
+  .prompt { color: var(--accent); font-weight: 600; }
+  .arrow { color: var(--accent); }
+
+  .paths {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3) var(--space-4);
+  }
+  .paths a {
+    color: var(--fg);
+    border-bottom: 1px dashed var(--border-strong);
+  }
+  .paths a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+  .caret {
+    color: var(--accent);
+    animation: blink 1.1s steps(1) infinite;
+  }
+
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .caret { animation: none; }
+  }
+</style>

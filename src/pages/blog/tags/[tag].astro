@@ -1,0 +1,39 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import PostCard from '../../../components/PostCard.astro';
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  const tags = Array.from(new Set(posts.flatMap((p) => p.data.tags)));
+  return tags.map((tag) => ({
+    params: { tag },
+    props: {
+      tag,
+      posts: posts
+        .filter((p) => p.data.tags.includes(tag))
+        .sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()),
+    },
+  }));
+}
+
+const { tag, posts } = Astro.props;
+---
+
+<BaseLayout title={`#${tag}`} description={`Posts tagged ${tag}.`}>
+  <div class="page prose-width" style="margin-inline: auto;">
+    <p class="kicker"><a href="/blog">writing</a></p>
+    <h1>#{tag}</h1>
+    <p class="lede">{posts.length} {posts.length === 1 ? 'post' : 'posts'} tagged with this.</p>
+    <div class="post-list">
+      {posts.map((p) => <PostCard post={p} />)}
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .kicker { font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--space-2); }
+  .kicker a { color: var(--accent); border-bottom: none; }
+  h1 { font-family: var(--font-mono); font-size: var(--fs-2xl); margin-bottom: var(--space-2); }
+  .lede { color: var(--fg-muted); font-size: var(--fs-md); margin-bottom: var(--space-8); }
+</style>
