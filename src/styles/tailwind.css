@@ -1,0 +1,7 @@
+@import 'tailwindcss';
+
+@plugin '@tailwindcss/typography';
+
+@theme {
+  /* Theme tokens will be ported from tokens.css in Phase 2. Leaving empty for now. */
+}
