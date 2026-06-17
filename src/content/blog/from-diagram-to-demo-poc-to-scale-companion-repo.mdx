@@ -1,0 +1,598 @@
+---
+title: 'From diagram to demo: a runnable workflow runtime'
+description: 'A runnable workflow-runtime repo with one workflow.yaml, POC and production variants, LangGraph/MSAF implementations, and failure scenarios that make the architecture testable.'
+pubDate: 2026-06-18
+tags: [ai-systems, workflows, production, langgraph, agent-framework]
+---
+
+Architecture diagrams are easy to agree with. The harder test is what happens
+when the worker dies after a side effect, when a review waits for a human, or
+when a run needs to replay from the middle without corrupting the outside
+world.
+
+I built the companion repo to make that test concrete:
+**[poc-to-scale-demo](https://github.com/sachinkahawala/poc-to-scale-demo)**.
+It turns the workflow runtime from the
+[previous post](/blog/from-poc-to-scale-long-running-ai-workflows) into
+something cloneable, runnable, and deployable.
+
+The repo has one workflow definition, two runtime variants, two framework
+adapters, six executable scenarios, and an Azure deployment path. The goal is
+to make the architecture observable under failure, not just describe it.
+
+## What the repo proves
+
+The repo is built around a small set of verifiable claims:
+
+- The workflow definition can stay stable while the runtime changes beneath it.
+- Retry, replay, human review, crash recovery, and compensation should be
+  observable from a CLI, not only described in prose.
+- The production runtime should fail differently from the POC runtime on the
+  same input.
+- Framework choice should not own the entire durability story; the common
+  runtime contract should be visible.
+- Local runs, Docker-backed dependencies, and Azure should exercise the same
+  runtime contract.
+
+## One workflow definition
+
+The central artifact is [`workflow.yaml`](https://github.com/sachinkahawala/poc-to-scale-demo/blob/main/workflow.yaml).
+It defines the same case-triage graph as the previous post: `classify`
+branches into `enrich` and `fetch_refs`, both feed `decide`, and `decide`
+either hands off directly or routes through `review`. Retries are declared per
+node, and `handoff` declares its compensating action alongside the forward
+effect.
+
+<figure class="figure-wide">
+  <svg viewBox="0 0 1024 320" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
+    <title>The workflow.yaml DAG. classify branches into enrich and fetch_refs, both feed decide, decide gates on confidence (greater than or equal to 0.8 goes straight to handoff, less than 0.8 detours through review first), and handoff carries a compensate action that points at crm.cancel_case.</title>
+    <style>{`
+      .d6 text { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; dominant-baseline: middle; text-anchor: middle; }
+      .d6 .node { fill: var(--bg-elevated); stroke: currentColor; stroke-width: 2; }
+      .d6 .node-accent { fill: var(--bg-elevated); stroke: var(--accent); stroke-width: 2; }
+      .d6 .lbl  { font-size: 13px; fill: currentColor; }
+      .d6 .lbl-accent { font-size: 13px; fill: var(--accent); }
+      .d6 .lbl-sub { font-size: 10px; fill: var(--fg-muted); }
+      .d6 .edge { fill: none; stroke: currentColor; stroke-width: 2; }
+      .d6 .edge-accent { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 4; }
+    `}</style>
+    <defs>
+      <marker id="g6-fg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+      </marker>
+      <marker id="g6-fg-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+      </marker>
+    </defs>
+    <g class="d6">
+      <rect class="node" x="32" y="132" width="128" height="56" rx="8" />
+      <text x="96" y="156" class="lbl">classify</text>
+      <text x="96" y="174" class="lbl-sub">label + confidence</text>
+
+      <rect class="node" x="232" y="48" width="128" height="56" rx="8" />
+      <text x="296" y="72" class="lbl">enrich</text>
+      <text x="296" y="90" class="lbl-sub">retry x4</text>
+
+      <rect class="node" x="232" y="216" width="128" height="56" rx="8" />
+      <text x="296" y="240" class="lbl">fetch_refs</text>
+      <text x="296" y="258" class="lbl-sub">retry x4</text>
+
+      <rect class="node" x="432" y="132" width="128" height="56" rx="8" />
+      <text x="496" y="156" class="lbl">decide</text>
+      <text x="496" y="174" class="lbl-sub">gate on confidence</text>
+
+      <rect class="node" x="632" y="48" width="128" height="56" rx="8" />
+      <text x="696" y="72" class="lbl">review</text>
+      <text x="696" y="90" class="lbl-sub">parks, waits on token</text>
+
+      <rect class="node-accent" x="832" y="132" width="160" height="56" rx="8" />
+      <text x="912" y="156" class="lbl-accent">handoff</text>
+      <text x="912" y="174" class="lbl-sub">writes to CRM</text>
+
+      <g class="edge" marker-end="url(#g6-fg)">
+        <path d="M160,148 C196,148 196,76 232,76" />
+        <path d="M160,172 C196,172 196,244 232,244" />
+        <path d="M360,76 C396,76 396,148 432,148" />
+        <path d="M360,244 C396,244 396,172 432,172" />
+        <path d="M560,148 C594,148 594,76 632,76" />
+        <path d="M760,76 C798,76 798,148 832,148" />
+        <path d="M560,172 L832,172" />
+      </g>
+
+      <text x="592" y="112" class="lbl-sub">{'confidence < 0.8'}</text>
+      <text x="696" y="192" class="lbl-sub">confidence &gt;= 0.8</text>
+
+      <g class="edge-accent" marker-end="url(#g6-fg-a)">
+        <path d="M912,188 L912,212" />
+      </g>
+      <text x="912" y="228" class="lbl-sub">compensate: crm.cancel_case</text>
+    </g>
+  </svg>
+  <figcaption>The DAG every variant executes. classify branches into enrich and fetch_refs, decide gates the handoff on confidence, and handoff carries its own compensating action.</figcaption>
+</figure>
+
+That file is byte-identical across every combination the repo supports:
+
+- POC runtime, on LangGraph
+- POC runtime, on Microsoft Agent Framework
+- Production runtime, on LangGraph
+- Production runtime, on Microsoft Agent Framework
+
+Four implementations share one definition, making the main architectural claim
+testable: production hardens the runtime, not the shape of the workflow.
+
+## Six executable scenarios
+
+The primary interface is the
+[`scenarios/`](https://github.com/sachinkahawala/poc-to-scale-demo/tree/main/scenarios)
+directory and the `demo` CLI that drives it. Each scenario is a YAML file that
+defines the input and the fault to inject. Each one maps to a runtime behavior
+that should be easy to inspect.
+
+```bash
+git clone https://github.com/sachinkahawala/poc-to-scale-demo
+cd poc-to-scale-demo
+
+uv sync --extra langgraph --extra msaf
+cp .env.example .env
+
+uv run demo run happy
+uv run demo run transient-failure
+uv run demo run crash-mid-effect
+uv run demo worker --drain
+uv run demo run human-review
+uv run demo approve <review_token>
+uv run demo run compensation
+uv run demo replay <run_id> --from decide
+```
+
+| Scenario | What to look for |
+| --- | --- |
+| `happy` | Completed trace and one delivered outbox row |
+| `transient-failure` | `enrich` fails twice, then attempt 3 succeeds |
+| `crash-mid-effect` | First run exits non-zero; `worker --drain` resumes without a duplicate CRM case |
+| `human-review` | Run parks with a review token; approval resumes it |
+| `compensation` | Forward effect lands, then `crm.cancel_case` compensates it |
+| `replay` | Upstream outcomes are reused; downstream outcomes are re-executed |
+
+The useful read order is also the useful run order.
+
+**`happy`** is the baseline. The graph walks `classify`, then `enrich` and
+`fetch_refs`, then `decide`, then `handoff`. The trace tree
+(`demo trace <run_id>`) matches the DAG above and gives the other scenarios a
+known-good reference point.
+
+**`transient-failure`** trips `enrich` twice. The node has
+`retry: { max: 4, backoff: jitter }` in `workflow.yaml`, so the runtime
+backs off, retries, and the run completes. The trace records the failed
+attempts, with attempt numbers monotonically increasing. Every retry is
+visible; none are collapsed into a single "succeeded" line.
+
+**`crash-mid-effect`** is the highest-signal failure case. The worker process
+dies (`os._exit`) after the `handoff` effect lands in the local outbox but
+before the outcome is written to state. The first `demo run crash-mid-effect`
+exits non-zero because the worker is gone. Then `demo worker --drain` picks up
+the redelivered task: a new attempt finds the dangling intent, queries the
+outbox by the recorded request id, and *adopts* the existing outcome. No
+second case is created.
+
+<figure class="figure-wide">
+  <svg viewBox="0 0 1024 360" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
+    <title>Crash mid effect, as a swim lane. Worker A writes intent, fires the effect that lands in the CRM outbox, then crashes before writing the outcome. On redelivery, worker B sees the dangling intent, queries the CRM outbox by the recorded request id, finds the outcome already present, and writes it. No second case is created.</title>
+    <style>{`
+      .d7 text { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; dominant-baseline: middle; }
+      .d7 .lbl  { font-size: 12px; fill: currentColor; }
+      .d7 .lbl-sub { font-size: 10px; fill: var(--fg-muted); }
+      .d7 .lane { font-size: 12px; fill: currentColor; text-anchor: middle; }
+      .d7 .accent { fill: var(--accent); }
+    `}</style>
+    <defs>
+      <marker id="g7-fg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+      </marker>
+    </defs>
+    <g class="d7">
+      <rect x="0" y="0" width="1024" height="360" rx="8" fill="var(--bg-elevated)" />
+
+      <text x="160" y="32" class="lane">worker</text>
+      <text x="512" y="32" class="lane">ledger</text>
+      <text x="864" y="32" class="lane">CRM outbox</text>
+
+      <line x1="160" y1="48" x2="160" y2="344" stroke="currentColor" stroke-width="1" stroke-dasharray="2 4" />
+      <line x1="512" y1="48" x2="512" y2="344" stroke="currentColor" stroke-width="1" stroke-dasharray="2 4" />
+      <line x1="864" y1="48" x2="864" y2="344" stroke="currentColor" stroke-width="1" stroke-dasharray="2 4" />
+
+      <text x="32" y="72" class="lbl">A</text>
+      <line x1="160" y1="72" x2="512" y2="72" stroke="currentColor" stroke-width="2" marker-end="url(#g7-fg)" />
+      <text x="336" y="62" class="lbl-sub" text-anchor="middle">intent (request_id = R)</text>
+
+      <text x="32" y="108" class="lbl">A</text>
+      <line x1="160" y1="108" x2="864" y2="108" stroke="currentColor" stroke-width="2" marker-end="url(#g7-fg)" />
+      <text x="512" y="98" class="lbl-sub" text-anchor="middle">effect: create_case(request_id = R)</text>
+
+      <text x="32" y="148" class="lbl accent">A</text>
+      <text x="170" y="148" class="lbl accent" text-anchor="start">x  crash before outcome is written</text>
+
+      <line x1="16" y1="178" x2="1008" y2="178" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4" />
+      <text x="512" y="194" class="lbl-sub" text-anchor="middle">queue redelivers the task</text>
+
+      <text x="32" y="228" class="lbl">B</text>
+      <line x1="512" y1="228" x2="160" y2="228" stroke="currentColor" stroke-width="2" marker-end="url(#g7-fg)" />
+      <text x="336" y="218" class="lbl-sub" text-anchor="middle">pending intent for R</text>
+
+      <text x="32" y="264" class="lbl">B</text>
+      <line x1="160" y1="264" x2="864" y2="264" stroke="currentColor" stroke-width="2" marker-end="url(#g7-fg)" />
+      <text x="512" y="254" class="lbl-sub" text-anchor="middle">query by request_id = R</text>
+
+      <line x1="864" y1="300" x2="160" y2="300" stroke="currentColor" stroke-width="2" marker-end="url(#g7-fg)" />
+      <text x="512" y="290" class="lbl-sub" text-anchor="middle">case already exists, status = success</text>
+
+      <text x="32" y="336" class="lbl">B</text>
+      <line x1="160" y1="336" x2="512" y2="336" stroke="currentColor" stroke-width="2" marker-end="url(#g7-fg)" />
+      <text x="336" y="326" class="lbl-sub" text-anchor="middle">outcome (adopted, not re-fired)</text>
+    </g>
+  </svg>
+  <figcaption>The intent, effect, outcome sequence with recovery. Worker A records the intent, fires the effect, and dies before recording the outcome. Worker B receives the redelivery, finds the dangling intent, queries by request id, and adopts the outcome the outside world already shows.</figcaption>
+</figure>
+
+**`human-review`** forces `decide` to come back at confidence 0.6, which is
+below the 0.8 threshold on the `decide` to `handoff` edge, so the run takes
+the `decide` to `review` edge instead and parks. `demo inspect <run_id>`
+shows a pending review with a token; `demo approve <token>` resumes the run
+and it completes through `handoff`. While the run is parked, no process is
+blocked. State sits in storage until an event resumes execution.
+
+**`compensation`** lands `handoff` successfully, then trips a later node so
+that the workflow has to roll back. The runtime calls `handoff`'s declared
+`compensate` action (`crm.cancel_case` against the local outbox), and the
+trace shows both the forward and the reverse on the same node. The outside
+world is left consistent without a manual cleanup script.
+
+**`replay`** demonstrates controlled re-execution from a recorded point in the
+run. `demo replay <run_id> --from decide` voids the outcomes of `decide` and
+everything downstream, then re-enqueues the run. The re-walk short-circuits
+every node whose recorded outcome is still valid (same input hash, same
+idempotency key, recorded outcome returned) and re-executes only the voided
+ones. The full history stays in the trace.
+
+Together, the scenarios turn the failure-modes table from the previous post
+into executable checks.
+
+## POC and production runtimes
+
+Every scenario takes `--variant poc|prod`. The two variants share the
+graph, the node implementations, the model gateway, and the scenarios.
+They differ in the runtime boundary:
+
+<figure class="figure-wide">
+  <svg viewBox="0 0 1024 320" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
+    <title>POC variant on the left: one orchestrator process holding the graph and state in memory, with the model gateway and effects to the side. Production variant on the right: scheduler, task queue, stateless worker pool, durable state store, and externals broken out as separate components.</title>
+    <style>{`
+      .d5 text { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; dominant-baseline: middle; text-anchor: middle; }
+      .d5 .lbl-main  { font-size: 13px; fill: currentColor; }
+      .d5 .lbl-sub   { font-size: 10px; fill: var(--fg-muted); }
+      .d5 .lbl-title { font-size: 12px; fill: currentColor; }
+      .d5 .accent    { fill: var(--accent); }
+    `}</style>
+    <defs>
+      <marker id="g5-fg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+      </marker>
+    </defs>
+    <g class="d5">
+      <rect x="0" y="0" width="1024" height="320" rx="8" fill="var(--bg-elevated)" />
+
+      <text x="128" y="32" class="lbl-title">--variant poc</text>
+      <rect x="32" y="56" width="416" height="232" rx="8" fill="none" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4" />
+      <rect x="64" y="120" width="200" height="104" rx="8" fill="var(--bg-elevated)" stroke="currentColor" stroke-width="2" />
+      <text x="164" y="156" class="lbl-main">orchestrator</text>
+      <text x="164" y="180" class="lbl-sub">graph + state</text>
+      <text x="164" y="200" class="lbl-sub">in memory</text>
+      <rect x="304" y="96" width="128" height="48" rx="8" fill="var(--bg-elevated)" stroke="currentColor" stroke-width="2" />
+      <text x="368" y="120" class="lbl-main">model</text>
+      <rect x="304" y="200" width="128" height="48" rx="8" fill="var(--bg-elevated)" stroke="var(--accent)" stroke-width="2" />
+      <text x="368" y="224" class="lbl-main accent">effects</text>
+      <g fill="none" stroke="currentColor" stroke-width="2" marker-end="url(#g5-fg)">
+        <line x1="264" y1="156" x2="304" y2="120" />
+        <line x1="264" y1="188" x2="304" y2="224" />
+      </g>
+
+      <text x="768" y="32" class="lbl-title">--variant prod</text>
+      <rect x="576" y="56" width="416" height="232" rx="8" fill="none" stroke="var(--border)" stroke-width="1" stroke-dasharray="4 4" />
+      <rect x="608" y="88" width="120" height="48" rx="8" fill="var(--bg-elevated)" stroke="currentColor" stroke-width="2" />
+      <text x="668" y="112" class="lbl-main">scheduler</text>
+      <rect x="760" y="88" width="120" height="48" rx="8" fill="var(--bg-elevated)" stroke="currentColor" stroke-width="2" />
+      <text x="820" y="112" class="lbl-main">task queue</text>
+      <rect x="912" y="88" width="64" height="48" rx="8" fill="var(--bg-elevated)" stroke="currentColor" stroke-width="2" />
+      <text x="944" y="112" class="lbl-main">DLQ</text>
+      <rect x="608" y="160" width="368" height="56" rx="8" fill="var(--bg-elevated)" stroke="currentColor" stroke-width="2" />
+      <text x="792" y="184" class="lbl-main">worker pool</text>
+      <text x="792" y="204" class="lbl-sub">stateless, idempotent</text>
+      <rect x="608" y="232" width="176" height="48" rx="8" fill="var(--bg-elevated)" stroke="currentColor" stroke-width="2" />
+      <text x="696" y="256" class="lbl-main">durable state</text>
+      <rect x="800" y="232" width="176" height="48" rx="8" fill="var(--bg-elevated)" stroke="var(--accent)" stroke-width="2" />
+      <text x="888" y="256" class="lbl-main accent">effects + compensate</text>
+      <g fill="none" stroke="currentColor" stroke-width="2" marker-end="url(#g5-fg)">
+        <line x1="728" y1="112" x2="760" y2="112" />
+        <line x1="880" y1="112" x2="912" y2="112" />
+        <line x1="820" y1="136" x2="820" y2="160" />
+        <line x1="696" y1="216" x2="696" y2="232" />
+      </g>
+    </g>
+  </svg>
+  <figcaption>The same workflow.yaml runs under both variants. The flag selects which runtime executes it.</figcaption>
+</figure>
+
+| | `--variant poc` | `--variant prod` (default) |
+| --- | --- | --- |
+| Process model | one process owns everything | scheduler + stateless workers |
+| State | in memory | durable store; intent before every effect, outcome after |
+| Tasks | in-process function calls | at-least-once queue with redelivery and a DLQ |
+| Crash mid-run | the run is gone | redelivery resumes; recorded intent makes the retry idempotent |
+| Human review | blocks the process | parks the run; an event wakes it |
+
+The most useful comparison is `crash-mid-effect`. Under `--variant poc`, the
+run is gone with the process because state lived inside the process. Under
+`--variant prod`, queue redelivery and the intent/outcome ledger recover the
+run without duplicating the external effect. The comparison is observable
+rather than asserted: the two variants fail differently on the same input.
+
+## Two frameworks, one runtime contract
+
+The repo implements every variant twice: once on
+[LangGraph](https://github.com/langchain-ai/langgraph), once on
+[Microsoft Agent Framework](https://github.com/microsoft/agent-framework).
+Both call Azure OpenAI through the same model gateway. Both go through the
+same execute loop in `src/common/executor.py`. Every scenario passes under
+both with `--framework langgraph|msaf`.
+
+The detailed framework comparison lives in
+[`docs/LANGGRAPH_VS_MSAF.md`](https://github.com/sachinkahawala/poc-to-scale-demo/blob/main/docs/LANGGRAPH_VS_MSAF.md).
+The important boundary for this post is that most production durability does
+not live in either graph framework. It lives in `src/common/`:
+
+- the intent/outcome ledger
+- the effect-recovery arm (query the world by request id after a crash)
+- compensations for non-idempotent effects
+- the model gateway (rate limit, per-run budget, deployment mapping)
+- the task queue between scheduler and workers
+- replay as a first-class operation over recorded inputs
+
+This boundary separates graph execution from the durability of the workflow's
+relationship with the outside world. The repo makes that separation visible by
+running the same definition on two graph runtimes and keeping the recovery
+contract common.
+
+## Local, Docker, and Azure execution
+
+By default the prod variant runs on SQLite (state) and a durable local
+queue. That requires no Azure account, no Docker, and no cloud spend. Those
+defaults are enough to demonstrate every scenario.
+
+For storage and queue semantics closer to the Azure deployment, running
+`docker compose up -d` brings up Postgres and the Azure Service Bus emulator
+locally:
+
+```bash
+docker compose up -d
+DEMO_STATE_BACKEND=postgres DEMO_BROKER_BACKEND=servicebus \
+SERVICEBUS_CONNECTION_STRING="Endpoint=sb://localhost;...UseDevelopmentEmulator=true;" \
+uv run demo run happy
+```
+
+The Azure deployment is the same production runtime mapped onto managed
+services.
+
+<figure class="figure-wide">
+  <svg viewBox="0 0 1024 500" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
+    <title>Azure deployment topology. azd up builds and deploys an image through Container Registry into a Container Apps environment. The environment contains a CLI job, two internal schedulers, and two KEDA-scaled workers. Each scheduler enqueues work to its Service Bus queue, each matching worker drains from Service Bus, workers write durable state to Postgres and call Azure OpenAI, Key Vault supplies secrets upward to the compute environment, and Application Insights receives trace spans.</title>
+    <style>{`
+      .d8 text { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; dominant-baseline: middle; text-anchor: middle; }
+      .d8 .box { fill: var(--bg-elevated); stroke: currentColor; stroke-width: 2; }
+      .d8 .box-muted { fill: var(--bg-elevated); stroke: var(--border); stroke-width: 1.5; }
+      .d8 .box-accent { fill: var(--bg-elevated); stroke: var(--accent); stroke-width: 2; }
+      .d8 .boundary { fill: none; stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 5 5; }
+      .d8 .junction { fill: none; stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 3 3; }
+      .d8 .lbl-main { font-size: 12px; fill: currentColor; }
+      .d8 .lbl-title { font-size: 12px; fill: currentColor; font-weight: 600; }
+      .d8 .lbl-sub { font-size: 10px; fill: var(--fg-muted); }
+      .d8 .edge { fill: none; stroke: currentColor; stroke-width: 2; }
+      .d8 .edge-muted { fill: none; stroke: var(--border); stroke-width: 1.5; }
+      .d8 .edge-accent { fill: none; stroke: var(--accent); stroke-width: 2; }
+      .d8 .edge-trace { fill: none; stroke: var(--accent); stroke-width: 2; stroke-dasharray: 4 4; }
+      .d8 .edge-secret { fill: none; stroke: var(--border); stroke-width: 1.5; stroke-dasharray: 3 3; }
+    `}</style>
+    <defs>
+      <marker id="g8-fg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+      </marker>
+      <marker id="g8-muted" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--border)" />
+      </marker>
+      <marker id="g8-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+      </marker>
+    </defs>
+    <g class="d8">
+      <rect x="0" y="0" width="1024" height="500" rx="8" fill="var(--bg-elevated)" />
+      <rect class="boundary" x="16" y="16" width="992" height="468" rx="8" />
+      <text x="108" y="36" class="lbl-title">Azure resource group</text>
+
+      <rect class="box" x="42" y="64" width="110" height="48" rx="8" />
+      <text x="97" y="83" class="lbl-main">azd up</text>
+      <text x="97" y="100" class="lbl-sub">build + deploy</text>
+
+      <rect class="box-muted" x="188" y="64" width="118" height="48" rx="8" />
+      <text x="247" y="83" class="lbl-main">ACR</text>
+      <text x="247" y="100" class="lbl-sub">container image</text>
+
+      <rect class="boundary" x="330" y="44" width="384" height="280" rx="8" />
+      <text x="522" y="66" class="lbl-title">Container Apps environment</text>
+
+      <rect class="box-muted" x="462" y="82" width="120" height="42" rx="8" />
+      <text x="522" y="100" class="lbl-main">cli job</text>
+      <text x="522" y="116" class="lbl-sub">one-shot runs</text>
+
+      <rect class="box" x="356" y="152" width="148" height="42" rx="8" />
+      <text x="430" y="170" class="lbl-main">sched-langgraph</text>
+      <text x="430" y="186" class="lbl-sub">internal ingress</text>
+
+      <rect class="box" x="540" y="152" width="148" height="42" rx="8" />
+      <text x="614" y="170" class="lbl-main">sched-msaf</text>
+      <text x="614" y="186" class="lbl-sub">internal ingress</text>
+
+      <rect class="box-accent" x="356" y="242" width="148" height="42" rx="8" />
+      <text x="430" y="260" class="lbl-main">worker-langgraph</text>
+      <text x="430" y="276" class="lbl-sub">KEDA scale 0 to N</text>
+
+      <rect class="box-accent" x="540" y="242" width="148" height="42" rx="8" />
+      <text x="614" y="260" class="lbl-main">worker-msaf</text>
+      <text x="614" y="276" class="lbl-sub">KEDA scale 0 to N</text>
+
+      <rect class="box-accent" x="770" y="138" width="210" height="196" rx="8" />
+      <text x="875" y="160" class="lbl-title">Service Bus</text>
+      <rect class="box-muted" x="794" y="188" width="162" height="28" rx="6" />
+      <text x="875" y="202" class="lbl-sub">tasks-langgraph</text>
+      <rect class="box-muted" x="794" y="238" width="162" height="28" rx="6" />
+      <text x="875" y="252" class="lbl-sub">tasks-msaf</text>
+      <rect class="box-muted" x="836" y="288" width="78" height="20" rx="6" />
+      <text x="875" y="298" class="lbl-sub">DLQs</text>
+
+      <rect class="box-accent" x="50" y="410" width="200" height="52" rx="8" />
+      <text x="150" y="430" class="lbl-main">Postgres Flexible</text>
+      <text x="150" y="448" class="lbl-sub">state + outbox</text>
+
+      <rect class="box-muted" x="302" y="410" width="168" height="52" rx="8" />
+      <text x="386" y="430" class="lbl-main">Azure OpenAI</text>
+      <text x="386" y="448" class="lbl-sub">model gateway</text>
+
+      <rect class="box-muted" x="522" y="410" width="146" height="52" rx="8" />
+      <text x="595" y="430" class="lbl-main">Key Vault</text>
+      <text x="595" y="448" class="lbl-sub">secrets</text>
+
+      <rect class="box-accent" x="724" y="410" width="246" height="52" rx="8" />
+      <text x="847" y="430" class="lbl-main">Application Insights</text>
+      <text x="847" y="448" class="lbl-sub">node spans + logs</text>
+
+      <g class="edge" marker-end="url(#g8-fg)">
+        <path d="M152,88 L188,88" />
+        <path d="M306,88 L330,88" />
+      </g>
+
+      <g class="edge-muted" marker-end="url(#g8-muted)">
+        <path d="M522,124 L522,138 L430,138 L430,152" />
+        <path d="M522,138 L614,138 L614,152" />
+      </g>
+      <text x="522" y="134" class="lbl-sub">POST /runs</text>
+
+      <g class="edge-accent">
+        <path d="M430,194 L430,214" />
+        <path d="M614,194 L614,214" />
+        <path d="M430,214 L614,214" />
+      </g>
+      <g class="edge-accent" marker-end="url(#g8-accent)">
+        <path d="M614,214 L770,214" />
+      </g>
+      <text x="700" y="204" class="lbl-sub">enqueue</text>
+
+      <g class="edge-accent">
+        <path d="M770,314 L430,314" />
+      </g>
+      <g class="edge-accent" marker-end="url(#g8-accent)">
+        <path d="M430,314 L430,284" />
+        <path d="M614,314 L614,284" />
+      </g>
+      <text x="700" y="304" class="lbl-sub">dequeue</text>
+
+      <g class="junction">
+        <path d="M430,284 L430,340" />
+        <path d="M614,284 L614,340" />
+        <path d="M430,340 L614,340" />
+      </g>
+
+      <g class="edge-accent" marker-end="url(#g8-accent)">
+        <path d="M430,340 L150,340 L150,410" />
+      </g>
+      <text x="288" y="330" class="lbl-sub">durable state</text>
+
+      <g class="edge-muted" marker-end="url(#g8-muted)">
+        <path d="M522,340 L386,340 L386,410" />
+      </g>
+      <text x="454" y="330" class="lbl-sub">models</text>
+
+      <g class="edge-secret" marker-end="url(#g8-muted)">
+        <path d="M595,410 L595,340" />
+      </g>
+      <text x="620" y="374" class="lbl-sub">secrets</text>
+
+      <g class="edge-trace" marker-end="url(#g8-accent)">
+        <path d="M614,340 L847,340 L847,410" />
+      </g>
+      <text x="732" y="330" class="lbl-sub">spans</text>
+    </g>
+  </svg>
+  <figcaption>The deployed topology keeps the local production contract intact: schedulers enqueue work, workers drain Service Bus, Postgres stores durable state, Key Vault supplies secrets, and Application Insights shows node-level spans.</figcaption>
+</figure>
+
+For the actual Azure deployment, `azd up` provisions this topology and
+`azd down` tears it back out. The walkthrough, cost notes, and teardown checks
+live in
+[`docs/AZURE_DEPLOY.md`](https://github.com/sachinkahawala/poc-to-scale-demo/blob/main/docs/AZURE_DEPLOY.md).
+
+The Azure path creates standing paid resources, mainly Postgres and Service
+Bus. Treat it as disposable infrastructure and run `azd down --purge` after
+testing.
+
+On Azure, OTel spans export to Application Insights with span names equal
+to node ids, so the trace tree in the portal is the graph from
+`workflow.yaml`. The workflow definition is also the schema for the trace.
+
+## What is intentionally out of scope
+
+The repo stays focused on runtime patterns. Several production concerns are
+intentionally excluded because they would not change the contracts being
+demonstrated:
+
+- **Auth.** The CLI, scheduler `/review` endpoint, and demo credentials are
+  local-dev-only. The repo demonstrates runtime patterns rather than service
+  hardening.
+- **A web UI animating the graph.** The CLI trace and App Insights cover
+  it; a UI is its own product.
+- **APIM in front of Azure OpenAI.** The natural next step for
+  multi-tenant rate isolation, but it roughly doubles the infra for one
+  demo. Discussed in the framework comparison doc, not deployed.
+- **Multi-region / HA Postgres.** A single Flexible Server with backups is
+  enough to demonstrate durability.
+- **An actual CRM.** The `handoff` effect writes to a local outbox table
+  that exposes a queryable request id, the same shape as the post's
+  idempotent-effect example, none of the third-party plumbing.
+
+Each of these would be a real engineering decision in a production
+deployment. None of them changes the runtime contract the repo is designed to
+demonstrate.
+
+## Where to start
+
+The fastest way to evaluate the repo is:
+
+1. **Run `crash-mid-effect` under both variants.** This gives the smallest
+   demo that makes the POC-to-prod runtime difference visible.
+2. **Open `src/common/executor.py` and read the loop.** The loop is short,
+   readable, and sits at the center of every scenario.
+3. **Write a seventh scenario.** Pick a failure mode outside the current six
+   (a model timeout that turns into budget exhaustion, a review
+   that times out past its SLA, an effect whose compensation itself fails)
+   and add a YAML for it. If the scenario passes under `--variant prod` and
+   exposes the expected POC limitation under `--variant poc`, the runtime is
+   doing what it claims.
+
+The previous post ended with a promise to cover end-to-end workflow
+evaluation. Before doing that well, the runtime needed to be executable and
+observable; this companion repo supplies that foundation. Its six scenarios
+verify execution behavior under failure. The evaluation work comes next,
+using representative cases, workflow-level scoring, and regression checks to
+measure whether the complete workflow produces the right result.
+
+Until then, I hope the repo gives you a practical place to test these ideas in
+your own systems. If you find a failure mode the six scenarios miss, I would be
+glad to hear about it.
