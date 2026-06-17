@@ -17,39 +17,20 @@ const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
 ---
 
 <BaseLayout title="Papers" description={`Selected publications by ${site.name}.`}>
-  <div class="page prose-width" style="margin-inline: auto;">
-    <header class="hero">
-      <p class="kicker">papers</p>
-      <h1>Publications</h1>
-      <p class="lede">Selected publications. {papers.length} entries.</p>
+  <div class="mx-auto max-w-content px-4 py-8 md:px-8 md:py-12">
+    <header class="mb-12">
+      <p class="mb-2 font-mono text-xs uppercase tracking-[0.08em] text-accent">papers</p>
+      <h1 class="mb-2 text-3xl font-semibold leading-tight text-fg">Publications</h1>
+      <p class="text-md text-muted">Selected publications. {papers.length} entries.</p>
     </header>
 
     {years.map((y) => (
-      <section class="year-block">
-        <h2 class="year">{y}</h2>
-        <div class="paper-list">
+      <section class="mt-12 first:mt-0">
+        <h2 class="mb-2 border-b border-border pb-2 font-mono text-xs uppercase tracking-[0.08em] text-subtle">{y}</h2>
+        <div>
           {grouped[y].map((p) => <PaperCard paper={p} />)}
         </div>
       </section>
     ))}
   </div>
 </BaseLayout>
-
-<style>
-  .hero { margin-bottom: var(--space-12); }
-  .kicker { font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: var(--space-2); }
-  h1 { font-size: var(--fs-3xl); margin-bottom: var(--space-2); }
-  .lede { color: var(--fg-muted); font-size: var(--fs-md); }
-
-  .year-block + .year-block { margin-top: var(--space-12); }
-  .year {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--fg-subtle);
-    border-bottom: 1px solid var(--border);
-    padding-bottom: var(--space-2);
-    margin-bottom: var(--space-2);
-  }
-</style>

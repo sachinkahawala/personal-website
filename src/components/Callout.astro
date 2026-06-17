@@ -9,32 +9,10 @@ const { kind = 'note', title } = Astro.props;
 const iconName = kind === 'warn' ? 'lucide:alert-triangle' : kind === 'tip' ? 'lucide:lightbulb' : 'lucide:info';
 ---
 
-<aside class={`callout callout-${kind}`}>
-  <div class="head">
-    <Icon name={iconName} />
+<aside class="my-6 rounded-sm border border-accent/30 border-l-[3px] border-l-accent bg-accent-bg px-4 py-3">
+  <div class="mb-2 inline-flex items-center gap-2 font-mono text-sm text-accent">
+    <Icon name={iconName} class="size-4" />
     <strong>{title ?? kind.charAt(0).toUpperCase() + kind.slice(1)}</strong>
   </div>
-  <div class="body"><slot /></div>
+  <div class="[&_p]:m-0"><slot /></div>
 </aside>
-
-<style>
-  .callout {
-    background: var(--accent-bg);
-    border: 1px solid color-mix(in oklab, var(--accent) 30%, transparent);
-    border-left: 3px solid var(--accent);
-    border-radius: var(--radius-sm);
-    padding: var(--space-3) var(--space-4);
-    margin: var(--space-6) 0;
-  }
-  .head {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--accent);
-    margin-bottom: var(--space-2);
-  }
-  .head :global(svg) { width: 16px; height: 16px; }
-  .body :global(p) { margin: 0; }
-</style>

@@ -26,23 +26,23 @@ const minutes = remarkPluginFrontmatter?.minutesRead ?? null;
 ---
 
 <BaseLayout title={title} description={description}>
-  <article class="page prose-width" style="margin-inline: auto;" data-pagefind-body>
-    <header class="post-head">
-      <p class="kicker"><a href="/blog">writing</a></p>
-      <h1>{title}</h1>
-      <p class="meta">
-        <time datetime={dateStr}>{dateStr}</time>
+  <article class="mx-auto max-w-content px-4 py-8 md:px-8 md:py-12" data-pagefind-body>
+    <header class="mb-8">
+      <p class="mb-2 font-mono text-xs uppercase tracking-[0.08em]"><a class="text-accent" href="/blog">writing</a></p>
+      <h1 class="mb-3 text-3xl font-semibold leading-[1.15] text-fg">{title}</h1>
+      <p class="flex flex-wrap items-center gap-2 font-mono text-xs text-muted">
+        <time class="text-muted" datetime={dateStr}>{dateStr}</time>
         {updatedDate && (
           <>
-            <span class="sep">·</span>
+            <span class="text-subtle">·</span>
             <span>updated {updatedDate.toISOString().slice(0, 10)}</span>
           </>
         )}
-        {minutes && (<><span class="sep">·</span><span>{minutes}</span></>)}
+        {minutes && (<><span class="text-subtle">·</span><span>{minutes}</span></>)}
         {tags.length > 0 && (
           <>
-            <span class="sep">·</span>
-            <span class="tags">
+            <span class="text-subtle">·</span>
+            <span class="inline-flex flex-wrap gap-1.5">
               {tags.map((t) => <TagPill tag={t} href={`/blog/tags/${t}`} size="sm" />)}
             </span>
           </>
@@ -54,62 +54,19 @@ const minutes = remarkPluginFrontmatter?.minutesRead ?? null;
       <Content />
     </Prose>
 
-    <nav class="post-nav" aria-label="More posts">
+    <nav class="mt-16 grid grid-cols-2 gap-4 border-t border-border pt-6" aria-label="More posts">
       {prev ? (
-        <a href={`/blog/${prev.id}`} class="nav-link prev">
-          <span class="label">← Previous</span>
-          <span class="title">{prev.data.title}</span>
+        <a href={`/blog/${prev.id}`} class="flex flex-col gap-1 rounded-sm border border-border p-3 text-fg transition-colors duration-150 ease-out hover:border-accent">
+          <span class="font-mono text-xs text-accent">← Previous</span>
+          <span class="text-fg">{prev.data.title}</span>
         </a>
       ) : <span />}
       {next ? (
-        <a href={`/blog/${next.id}`} class="nav-link next">
-          <span class="label">Next →</span>
-          <span class="title">{next.data.title}</span>
+        <a href={`/blog/${next.id}`} class="flex flex-col gap-1 rounded-sm border border-border p-3 text-right text-fg transition-colors duration-150 ease-out hover:border-accent">
+          <span class="font-mono text-xs text-accent">Next →</span>
+          <span class="text-fg">{next.data.title}</span>
         </a>
       ) : <span />}
     </nav>
   </article>
 </BaseLayout>
-
-<style>
-  .post-head { margin-bottom: var(--space-8); }
-  .kicker { font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--space-2); }
-  .kicker a { color: var(--accent); border-bottom: none; }
-  h1 { font-size: var(--fs-3xl); margin-bottom: var(--space-3); line-height: 1.15; }
-  .meta {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--fg-muted);
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: var(--space-2);
-  }
-  .meta time { color: var(--fg-muted); }
-  .sep { color: var(--fg-subtle); }
-  .tags { display: inline-flex; gap: 6px; flex-wrap: wrap; }
-
-  .post-nav {
-    margin-top: var(--space-16);
-    padding-top: var(--space-6);
-    border-top: 1px solid var(--border);
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-4);
-  }
-  .nav-link {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-1);
-    color: var(--fg);
-    border-bottom: none;
-    padding: var(--space-3);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    transition: border-color var(--transition);
-  }
-  .nav-link:hover { border-color: var(--accent); }
-  .nav-link.next { text-align: right; }
-  .nav-link .label { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--accent); }
-  .nav-link .title { color: var(--fg); }
-</style>

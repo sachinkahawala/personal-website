@@ -1,97 +1,28 @@
 ---
 // Typography wrapper for MDX content. Owns post-body styles.
+const proseClass = [
+  'max-w-[68ch] text-md leading-base text-fg',
+  '[&>*+*]:mt-4 [&>*+h2]:mt-12 [&>*+h3]:mt-8',
+  '[&_h2]:text-2xl [&_h2]:font-semibold [&_h2]:leading-tight [&_h2]:text-fg',
+  '[&_h3]:text-xl [&_h3]:font-semibold [&_h3]:leading-tight [&_h3]:text-fg',
+  '[&_h4]:text-lg [&_h4]:font-semibold [&_h4]:leading-tight [&_h4]:text-fg',
+  '[&_p]:text-fg',
+  '[&_a]:border-b [&_a]:border-accent/40 [&_a]:text-accent [&_a]:transition-colors [&_a]:duration-150 [&_a]:ease-out [&_a:hover]:border-current',
+  '[&_ul]:m-0 [&_ul]:list-disc [&_ul]:pl-[1.4em] [&_ol]:m-0 [&_ol]:list-decimal [&_ol]:pl-[1.4em]',
+  '[&_li+li]:mt-2 [&_li::marker]:text-subtle',
+  '[&_strong]:font-semibold [&_strong]:text-fg [&_em]:text-fg',
+  '[&_blockquote]:m-0 [&_blockquote]:rounded-r-sm [&_blockquote]:border-l-[3px] [&_blockquote]:border-accent [&_blockquote]:bg-elevated [&_blockquote]:px-4 [&_blockquote]:py-2 [&_blockquote]:text-muted',
+  '[&_hr]:my-8 [&_hr]:border-0 [&_hr]:border-t [&_hr]:border-border',
+  '[&_img]:my-6 [&_img]:rounded-md [&_figure]:my-6 [&_figure]:rounded-md',
+  '[&_figcaption]:mt-2 [&_figcaption]:text-center [&_figcaption]:text-sm [&_figcaption]:text-muted',
+  '[&_pre]:my-4',
+  '[&_table]:my-6 [&_table]:w-full [&_table]:border-collapse [&_table]:text-sm',
+  '[&_th]:border-b [&_th]:border-border-strong [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:align-top [&_th]:font-mono [&_th]:text-xs [&_th]:uppercase [&_th]:tracking-[0.04em] [&_th]:text-muted',
+  '[&_td]:border-b [&_td]:border-border [&_td]:px-3 [&_td]:py-2 [&_td]:text-left [&_td]:align-top',
+  '[&_td_code]:text-[0.9em] [&_th_code]:text-[0.9em]',
+].join(' ');
 ---
 
-<div class="prose">
+<div class={proseClass}>
   <slot />
 </div>
-
-<style is:global>
-  .prose {
-    max-width: var(--content-width);
-    font-size: var(--fs-md);
-    line-height: var(--lh-base);
-    color: var(--fg);
-  }
-
-  .prose > * + * { margin-top: var(--space-4); }
-  .prose > * + h2 { margin-top: var(--space-12); }
-  .prose > * + h3 { margin-top: var(--space-8); }
-
-  .prose h2 { font-size: var(--fs-2xl); }
-  .prose h3 { font-size: var(--fs-xl); }
-  .prose h4 { font-size: var(--fs-lg); }
-
-  .prose p { color: var(--fg); }
-
-  .prose a {
-    color: var(--accent);
-    border-bottom: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
-  }
-  .prose a:hover { border-bottom-color: currentColor; }
-
-  .prose ul, .prose ol {
-    padding-left: 1.4em;
-    margin: 0;
-  }
-  .prose li + li { margin-top: var(--space-2); }
-  .prose li::marker { color: var(--fg-subtle); }
-
-  .prose strong { color: var(--fg); font-weight: 600; }
-  .prose em { color: var(--fg); }
-
-  .prose blockquote {
-    border-left: 3px solid var(--accent);
-    padding: var(--space-2) var(--space-4);
-    margin: 0;
-    color: var(--fg-muted);
-    background: var(--bg-elevated);
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  }
-
-  .prose hr {
-    border: 0;
-    border-top: 1px solid var(--border);
-    margin: var(--space-8) 0;
-  }
-
-  .prose img, .prose figure {
-    margin: var(--space-6) 0;
-    border-radius: var(--radius-md);
-  }
-
-  .prose figcaption {
-    font-size: var(--fs-sm);
-    color: var(--fg-muted);
-    text-align: center;
-    margin-top: var(--space-2);
-  }
-
-  .prose pre {
-    margin: var(--space-4) 0;
-  }
-
-  .prose table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: var(--fs-sm);
-    margin: var(--space-6) 0;
-  }
-  .prose th, .prose td {
-    text-align: left;
-    padding: var(--space-2) var(--space-3);
-    border-bottom: 1px solid var(--border);
-    vertical-align: top;
-  }
-  .prose th {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--fg-muted);
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--border-strong);
-  }
-  .prose td code, .prose th code {
-    font-size: 0.9em;
-  }
-</style>

@@ -19,90 +19,45 @@ const projects = (await getCollection('projects'))
 <BaseLayout>
   <Hero />
 
-  <div class="page">
-    <section class="intro">
+  <div class="mx-auto max-w-page px-4 py-8 md:px-8 md:py-12">
+    <section class="mx-auto mb-16 max-w-content text-center text-md text-fg">
       <p>
-        I'm <strong>{site.name}</strong>, a {site.role} based in {site.location}.
+        I'm <strong class="font-semibold text-fg">{site.name}</strong>, a {site.role} based in {site.location}.
         I design and ship production AI systems: LLM pipelines, multi-agent workflows,
         and the evaluation harnesses that keep them honest. My background is a PhD in AI
         and 6+ years across research and industry.
       </p>
     </section>
 
-    <section class="block">
-      <header class="block-head">
-        <h2>Latest writing</h2>
-        <a href="/blog" class="all">All posts →</a>
+    <section class="my-16">
+      <header class="mb-6 flex items-baseline justify-between border-b border-border pb-3">
+        <h2 class="text-xl font-semibold leading-tight text-fg">Latest writing</h2>
+        <a href="/blog" class="font-mono text-sm text-muted transition-colors duration-150 ease-out hover:text-accent">All posts →</a>
       </header>
-      <div class="post-list">
+      <div class="flex flex-col">
         {posts.map((p) => <PostCard post={p} />)}
-        {posts.length === 0 && <p class="muted">No posts yet. Check back soon.</p>}
+        {posts.length === 0 && <p class="text-muted">No posts yet. Check back soon.</p>}
       </div>
     </section>
 
-    <section class="block">
-      <header class="block-head">
-        <h2>Featured projects</h2>
-        <a href="/projects" class="all">All projects →</a>
+    <section class="my-16">
+      <header class="mb-6 flex items-baseline justify-between border-b border-border pb-3">
+        <h2 class="text-xl font-semibold leading-tight text-fg">Featured projects</h2>
+        <a href="/projects" class="font-mono text-sm text-muted transition-colors duration-150 ease-out hover:text-accent">All projects →</a>
       </header>
-      <div class="project-grid">
+      <div class="grid grid-cols-1 gap-4 min-[720px]:grid-cols-3">
         {projects.map((p) => <ProjectCard project={p} />)}
       </div>
     </section>
 
-    <section class="block contact">
-      <h2>Get in touch</h2>
+    <section class="my-16">
+      <h2 class="mb-3 text-xl font-semibold leading-tight text-fg">Get in touch</h2>
       <p>
         Open to interesting AI/ML problems and collaborations. Reach me on
-        <a href={site.socials.linkedin} target="_blank" rel="noopener">LinkedIn</a>,
-        <a href={site.socials.github} target="_blank" rel="noopener">GitHub</a>, or
-        <a href={`mailto:${site.email}`}>{site.email}</a>.
+        <a class="text-accent transition-colors duration-150 ease-out hover:text-accent" href={site.socials.linkedin} target="_blank" rel="noopener">LinkedIn</a>,
+        <a class="text-accent transition-colors duration-150 ease-out hover:text-accent" href={site.socials.github} target="_blank" rel="noopener">GitHub</a>, or
+        <a class="text-accent transition-colors duration-150 ease-out hover:text-accent" href={`mailto:${site.email}`}>{site.email}</a>.
       </p>
     </section>
   </div>
 </BaseLayout>
-
-<style>
-  .intro {
-    max-width: var(--content-width);
-    margin: 0 auto var(--space-16);
-    font-size: var(--fs-md);
-    color: var(--fg);
-    text-align: center;
-  }
-  .intro strong { color: var(--fg); font-weight: 600; }
-
-  .block { margin: var(--space-16) 0; }
-
-  .block-head {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: var(--space-3);
-    margin-bottom: var(--space-6);
-  }
-  .block-head h2 { font-size: var(--fs-xl); }
-  .all {
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--fg-muted);
-    border-bottom: none;
-  }
-  .all:hover { color: var(--accent); }
-
-  .post-list { display: flex; flex-direction: column; }
-
-  .project-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-4);
-  }
-  @media (min-width: 720px) {
-    .project-grid { grid-template-columns: repeat(3, 1fr); }
-  }
-
-  .muted { color: var(--fg-muted); }
-
-  .contact h2 { font-size: var(--fs-xl); margin-bottom: var(--space-3); }
-</style>

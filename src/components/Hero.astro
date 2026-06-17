@@ -2,103 +2,31 @@
 import { site } from '../lib/site';
 ---
 
-<section class="hero">
-  <div class="terminal" role="img" aria-label="Terminal-style intro panel">
-    <div class="titlebar">
-      <span class="dot dot-r"></span>
-      <span class="dot dot-y"></span>
-      <span class="dot dot-g"></span>
-      <span class="title">sachin@melbourne:~</span>
+<section class="pb-8 pt-12">
+  <div class="mx-auto max-w-[720px] overflow-hidden rounded-lg border border-border bg-elevated shadow-md" role="img" aria-label="Terminal-style intro panel">
+    <div class="flex items-center gap-2 border-b border-border bg-code px-4 py-3 font-mono text-xs text-subtle">
+      <span class="size-[11px] rounded-full bg-[#ff5f57]"></span>
+      <span class="size-[11px] rounded-full bg-[#febc2e]"></span>
+      <span class="size-[11px] rounded-full bg-[#28c840]"></span>
+      <span class="ml-3">sachin@melbourne:~</span>
     </div>
-    <div class="screen">
-      <p><span class="prompt">$</span> whoami</p>
-      <p class="out"><span class="arrow">→</span> {site.name} &middot; {site.role}</p>
+    <div class="p-6 font-mono text-sm leading-[1.7] text-fg [&_p]:m-0">
+      <p><span class="font-semibold text-accent">$</span> whoami</p>
+      <p class="pl-3 text-muted"><span class="text-accent">→</span> {site.name} &middot; {site.role}</p>
       <p>&nbsp;</p>
-      <p><span class="prompt">$</span> cat about.md</p>
-      <p class="out">PhD in AI. Ship LLM + ML systems at PS Hummingbird.</p>
-      <p class="out">Based in {site.location.split(',')[0]}.</p>
+      <p><span class="font-semibold text-accent">$</span> cat about.md</p>
+      <p class="pl-3 text-muted">PhD in AI. Ship LLM + ML systems at PS Hummingbird.</p>
+      <p class="pl-3 text-muted">Based in {site.location.split(',')[0]}.</p>
       <p>&nbsp;</p>
-      <p><span class="prompt">$</span> ls ~/</p>
-      <p class="out paths">
-        <a href="/about">about/</a>
-        <a href="/blog">blog/</a>
-        <a href="/projects">projects/</a>
-        <a href="/papers">papers/</a>
-        <a href="/cv.pdf" target="_blank" rel="noopener">cv.pdf</a>
+      <p><span class="font-semibold text-accent">$</span> ls ~/</p>
+      <p class="flex flex-wrap gap-x-4 gap-y-3 pl-3 text-muted">
+        <a class="border-b border-dashed border-border-strong text-fg transition-colors duration-150 ease-out hover:border-accent hover:text-accent" href="/about">about/</a>
+        <a class="border-b border-dashed border-border-strong text-fg transition-colors duration-150 ease-out hover:border-accent hover:text-accent" href="/blog">blog/</a>
+        <a class="border-b border-dashed border-border-strong text-fg transition-colors duration-150 ease-out hover:border-accent hover:text-accent" href="/projects">projects/</a>
+        <a class="border-b border-dashed border-border-strong text-fg transition-colors duration-150 ease-out hover:border-accent hover:text-accent" href="/papers">papers/</a>
+        <a class="border-b border-dashed border-border-strong text-fg transition-colors duration-150 ease-out hover:border-accent hover:text-accent" href="/cv.pdf" target="_blank" rel="noopener">cv.pdf</a>
       </p>
-      <p class="cursor"><span class="prompt">$</span> <span class="caret">▍</span></p>
+      <p><span class="font-semibold text-accent">$</span> <span class="animate-caret-blink text-accent motion-reduce:animate-none">▍</span></p>
     </div>
   </div>
 </section>
-
-<style>
-  .hero {
-    padding: var(--space-12) 0 var(--space-8);
-  }
-
-  .terminal {
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    box-shadow: var(--shadow-md);
-    max-width: 720px;
-    margin: 0 auto;
-  }
-
-  .titlebar {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-4);
-    background: var(--bg-code);
-    border-bottom: 1px solid var(--border);
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--fg-subtle);
-  }
-
-  .dot { width: 11px; height: 11px; border-radius: 50%; display: inline-block; }
-  .dot-r { background: #ff5f57; }
-  .dot-y { background: #febc2e; }
-  .dot-g { background: #28c840; }
-  .title { margin-left: var(--space-3); }
-
-  .screen {
-    padding: var(--space-6);
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    line-height: 1.7;
-    color: var(--fg);
-  }
-
-  .screen p { margin: 0; }
-  .out { color: var(--fg-muted); padding-left: var(--space-3); }
-  .prompt { color: var(--accent); font-weight: 600; }
-  .arrow { color: var(--accent); }
-
-  .paths {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-3) var(--space-4);
-  }
-  .paths a {
-    color: var(--fg);
-    border-bottom: 1px dashed var(--border-strong);
-  }
-  .paths a:hover { color: var(--accent); border-bottom-color: var(--accent); }
-
-  .caret {
-    color: var(--accent);
-    animation: blink 1.1s steps(1) infinite;
-  }
-
-  @keyframes blink {
-    0%, 50% { opacity: 1; }
-    51%, 100% { opacity: 0; }
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .caret { animation: none; }
-  }
-</style>

@@ -4,45 +4,15 @@ import { Icon } from 'astro-icon/components';
 
 <button
   id="theme-toggle"
-  class="theme-toggle"
+  class="inline-flex size-9 items-center justify-center rounded-sm border border-border text-muted transition-colors duration-150 ease-out hover:border-border-strong hover:bg-elevated hover:text-fg"
   type="button"
   aria-label="Toggle color theme"
   title="Toggle theme (light / dark)"
 >
-  <Icon name="lucide:sun" class="icon icon-sun" aria-hidden="true" />
-  <Icon name="lucide:moon" class="icon icon-moon" aria-hidden="true" />
-  <Icon name="lucide:monitor" class="icon icon-system" aria-hidden="true" />
+  <Icon name="lucide:sun" class="hidden size-[18px] theme-light:block" aria-hidden="true" />
+  <Icon name="lucide:moon" class="hidden size-[18px] theme-dark-pref:block" aria-hidden="true" />
+  <Icon name="lucide:monitor" class="hidden size-[18px] theme-system:block" aria-hidden="true" />
 </button>
-
-<style>
-  .theme-toggle {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    color: var(--fg-muted);
-    transition: color var(--transition), border-color var(--transition), background var(--transition);
-  }
-
-  .theme-toggle:hover {
-    color: var(--fg);
-    border-color: var(--border-strong);
-    background: var(--bg-elevated);
-  }
-
-  .icon {
-    width: 18px;
-    height: 18px;
-    display: none;
-  }
-
-  :global(:root[data-theme-pref='light']) .theme-toggle .icon-sun { display: block; }
-  :global(:root[data-theme-pref='dark']) .theme-toggle .icon-moon { display: block; }
-  :global(:root[data-theme-pref='system']) .theme-toggle .icon-system { display: block; }
-</style>
 
 <script is:inline>
   (() => {

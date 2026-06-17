@@ -14,91 +14,36 @@ interface Props {
 const { paper, myName = 'Sachin Kahawala' } = Astro.props;
 ---
 
-<article class="paper">
-  <div class="badge">
-    <span class="venue">{paper.venue}</span>
-    <span class="year">{paper.year}</span>
+<article class="border-b border-border py-6 last:border-b-0">
+  <div class="mb-2 inline-flex items-center gap-2 font-mono text-xs text-subtle">
+    <span class="rounded-sm border border-border bg-code px-2 py-0.5 text-muted">{paper.venue}</span>
+    <span class="text-subtle">{paper.year}</span>
   </div>
-  <h3 class="title">{paper.title}</h3>
-  <p class="authors">
+  <h3 class="mb-2 text-lg font-semibold leading-[1.35] text-fg">{paper.title}</h3>
+  <p class="mb-3 text-sm text-muted">
     {paper.authors.map((a, i) => (
       <>
-        {a === myName ? <strong>{a}</strong> : a}{i < paper.authors.length - 1 && <span>, </span>}
+        {a === myName ? <strong class="font-semibold text-fg">{a}</strong> : a}{i < paper.authors.length - 1 && <span>, </span>}
       </>
     ))}
   </p>
   {paper.links && (paper.links.pdf || paper.links.doi || paper.links.scholar) && (
-    <div class="links">
+    <div class="inline-flex gap-4 font-mono text-xs">
       {paper.links.pdf && (
-        <a href={paper.links.pdf} target="_blank" rel="noopener">
-          <Icon name="lucide:file-text" /> PDF
+        <a class="inline-flex items-center gap-1 text-muted transition-colors duration-150 ease-out hover:text-accent" href={paper.links.pdf} target="_blank" rel="noopener">
+          <Icon name="lucide:file-text" class="size-3.5" /> PDF
         </a>
       )}
       {paper.links.doi && (
-        <a href={paper.links.doi} target="_blank" rel="noopener">
-          <Icon name="lucide:link" /> DOI
+        <a class="inline-flex items-center gap-1 text-muted transition-colors duration-150 ease-out hover:text-accent" href={paper.links.doi} target="_blank" rel="noopener">
+          <Icon name="lucide:link" class="size-3.5" /> DOI
         </a>
       )}
       {paper.links.scholar && (
-        <a href={paper.links.scholar} target="_blank" rel="noopener">
-          <Icon name="lucide:graduation-cap" /> Scholar
+        <a class="inline-flex items-center gap-1 text-muted transition-colors duration-150 ease-out hover:text-accent" href={paper.links.scholar} target="_blank" rel="noopener">
+          <Icon name="lucide:graduation-cap" class="size-3.5" /> Scholar
         </a>
       )}
     </div>
   )}
 </article>
-
-<style>
-  .paper {
-    border-bottom: 1px solid var(--border);
-    padding: var(--space-6) 0;
-  }
-  .paper:last-child { border-bottom: 0; }
-
-  .badge {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--fg-subtle);
-    margin-bottom: var(--space-2);
-  }
-  .venue {
-    color: var(--fg-muted);
-    background: var(--bg-code);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 2px 8px;
-  }
-  .year { color: var(--fg-subtle); }
-
-  .title {
-    font-size: var(--fs-lg);
-    margin-bottom: var(--space-2);
-    line-height: 1.35;
-  }
-
-  .authors {
-    color: var(--fg-muted);
-    margin-bottom: var(--space-3);
-    font-size: var(--fs-sm);
-  }
-  .authors strong { color: var(--fg); }
-
-  .links {
-    display: inline-flex;
-    gap: var(--space-4);
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-  }
-  .links a {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--fg-muted);
-    border-bottom: none;
-  }
-  .links a :global(svg) { width: 14px; height: 14px; }
-  .links a:hover { color: var(--accent); }
-</style>

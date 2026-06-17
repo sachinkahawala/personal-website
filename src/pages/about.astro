@@ -39,17 +39,21 @@ const awards = [
   'IEEEXtreme v11.0, Country rank 10th, Global 201st (2017)',
   'IEEEXtreme v10.0, Country rank 6th, Global 181st (2016)',
 ];
+
+const sectionHeadingClass = 'mb-6 border-b border-border pb-2 text-xl font-semibold leading-tight text-fg';
+const chipClass = 'rounded-sm border border-border bg-code px-2 py-[3px] font-mono text-xs text-muted';
+const plainItemClass = 'border-b border-border py-3 text-fg last:border-b-0';
 ---
 
 <BaseLayout title="About" description={`About ${site.name}, ${site.role}.`}>
-  <div class="page prose-width" style="margin-inline: auto;">
-    <header class="hero">
-      <p class="kicker">about</p>
-      <h1>{site.name}</h1>
-      <p class="lede">{site.role} based in {site.location}.</p>
+  <div class="mx-auto max-w-content px-4 py-8 md:px-8 md:py-12">
+    <header class="mb-12">
+      <p class="mb-2 font-mono text-xs uppercase tracking-[0.08em] text-accent">about</p>
+      <h1 class="mb-2 text-3xl font-semibold leading-tight text-fg">{site.name}</h1>
+      <p class="text-md text-muted">{site.role} based in {site.location}.</p>
     </header>
 
-    <section class="bio">
+    <section class="mt-16 [&_p]:mt-4 [&_p]:leading-[1.7] [&_p]:text-fg [&_p:first-child]:mt-0 [&_strong]:font-semibold [&_strong]:text-fg">
       <p>
         I'm a Data Scientist and AI Engineer with 6+ years of experience and a PhD in Artificial Intelligence.
         I design, build, and ship AI and machine learning systems across research and industry, spanning
@@ -67,178 +71,58 @@ const awards = [
       </p>
     </section>
 
-    <section>
-      <h2>Skills</h2>
-      <div class="skills">
+    <section class="mt-16">
+      <h2 class={sectionHeadingClass}>Skills</h2>
+      <div class="grid grid-cols-1 gap-6 min-[720px]:grid-cols-2">
         {skills.map((g) => (
-          <div class="skill-group">
-            <h4>{g.group}</h4>
-            <ul>
-              {g.items.map((it) => <li>{it}</li>)}
+          <div>
+            <h4 class="mb-3 font-mono text-xs uppercase tracking-[0.06em] text-subtle">{g.group}</h4>
+            <ul class="flex list-none flex-wrap gap-1.5 p-0">
+              {g.items.map((it) => <li class={chipClass}>{it}</li>)}
             </ul>
           </div>
         ))}
       </div>
     </section>
 
-    <section>
-      <h2>Experience</h2>
-      <ol class="timeline">
+    <section class="mt-16">
+      <h2 class={sectionHeadingClass}>Experience</h2>
+      <ol class="list-none p-0">
         {experience.map((e) => (
-          <li>
-            <div class="when">{e.when}</div>
-            <div class="what">
-              <div class="role">{e.role}</div>
-              <div class="org">{e.org} · {e.loc}</div>
+          <li class="grid grid-cols-1 gap-1 border-b border-border py-4 last:border-b-0 min-[720px]:grid-cols-[180px_1fr] min-[720px]:gap-4">
+            <div class="font-mono text-xs text-subtle">{e.when}</div>
+            <div>
+              <div class="font-semibold text-fg">{e.role}</div>
+              <div class="mt-0.5 text-sm text-muted">{e.org} · {e.loc}</div>
             </div>
           </li>
         ))}
       </ol>
     </section>
 
-    <section>
-      <h2>Education</h2>
-      <ul class="plain">
+    <section class="mt-16">
+      <h2 class={sectionHeadingClass}>Education</h2>
+      <ul class="list-none p-0">
         {education.map((e) => (
-          <li>
-            <strong>{e.degree}</strong>, {e.org}
-            <span class="when-inline">{e.when}</span>
+          <li class={plainItemClass}>
+            <strong class="font-semibold text-fg">{e.degree}</strong>, {e.org}
+            <span class="float-right font-mono text-xs text-subtle">{e.when}</span>
           </li>
         ))}
       </ul>
     </section>
 
-    <section>
-      <h2>Awards & achievements</h2>
-      <ul class="plain">
-        {awards.map((a) => <li>{a}</li>)}
+    <section class="mt-16">
+      <h2 class={sectionHeadingClass}>Awards & achievements</h2>
+      <ul class="list-none p-0">
+        {awards.map((a) => <li class={plainItemClass}>{a}</li>)}
       </ul>
     </section>
 
-    <section class="cv-cta">
-      <a href="/cv.pdf" target="_blank" rel="noopener" download class="cv-btn">
-        <Icon name="lucide:download" /> Download CV (PDF)
+    <section class="mt-16 text-center">
+      <a href="/cv.pdf" target="_blank" rel="noopener" download class="inline-flex items-center gap-2 rounded-sm bg-accent px-6 py-3 font-mono text-sm text-accent-fg transition-opacity duration-150 ease-out hover:opacity-85">
+        <Icon name="lucide:download" class="size-4" /> Download CV (PDF)
       </a>
     </section>
   </div>
 </BaseLayout>
-
-<style>
-  .hero { margin-bottom: var(--space-12); }
-  .kicker {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--accent);
-    margin-bottom: var(--space-2);
-  }
-  h1 { font-size: var(--fs-3xl); margin-bottom: var(--space-2); }
-  .lede { color: var(--fg-muted); font-size: var(--fs-md); }
-
-  section { margin-top: var(--space-16); }
-  section h2 {
-    font-size: var(--fs-xl);
-    margin-bottom: var(--space-6);
-    padding-bottom: var(--space-2);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .bio p { margin-top: var(--space-4); line-height: 1.7; }
-  .bio p:first-child { margin-top: 0; }
-  .bio strong { color: var(--fg); }
-
-  .skills {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-6);
-  }
-  @media (min-width: 720px) {
-    .skills { grid-template-columns: repeat(2, 1fr); }
-  }
-  .skill-group h4 {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--fg-subtle);
-    margin: 0 0 var(--space-3);
-  }
-  .skill-group ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .skill-group li {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--fg-muted);
-    background: var(--bg-code);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 3px 8px;
-  }
-
-  .timeline {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  .timeline li {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: var(--space-1);
-    padding: var(--space-4) 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .timeline li:last-child { border-bottom: 0; }
-  .when {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--fg-subtle);
-  }
-  .role { font-weight: 600; color: var(--fg); }
-  .org { color: var(--fg-muted); font-size: var(--fs-sm); margin-top: 2px; }
-  @media (min-width: 720px) {
-    .timeline li { grid-template-columns: 180px 1fr; gap: var(--space-4); }
-  }
-
-  .plain {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  .plain li {
-    padding: var(--space-3) 0;
-    border-bottom: 1px solid var(--border);
-    color: var(--fg);
-  }
-  .plain li:last-child { border-bottom: 0; }
-  .plain strong { color: var(--fg); font-weight: 600; }
-  .when-inline {
-    float: right;
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--fg-subtle);
-  }
-
-  .cv-cta { text-align: center; margin-top: var(--space-16); }
-  .cv-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-2);
-    padding: var(--space-3) var(--space-6);
-    background: var(--accent);
-    color: var(--accent-fg);
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    border-radius: var(--radius-sm);
-    border-bottom: 0;
-    transition: opacity var(--transition);
-  }
-  .cv-btn:hover { opacity: 0.85; border-bottom: 0; }
-  .cv-btn :global(svg) { width: 16px; height: 16px; }
-</style>

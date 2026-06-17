@@ -14,16 +14,16 @@ const { title, role, client, period, stack, outcome } = project.data;
 ---
 
 <BaseLayout title={title} description={outcome}>
-  <article class="page prose-width" style="margin-inline: auto;">
-    <header class="head">
-      <p class="kicker"><a href="/projects">projects</a></p>
-      <h1>{title}</h1>
-      <ul class="facts">
-        <li><span class="k">Role</span><span class="v">{role}</span></li>
-        {client && <li><span class="k">Client</span><span class="v">{client}</span></li>}
-        <li><span class="k">Period</span><span class="v">{period}</span></li>
+  <article class="mx-auto max-w-content px-4 py-8 md:px-8 md:py-12">
+    <header class="mb-8">
+      <p class="mb-2 font-mono text-xs uppercase tracking-[0.08em]"><a class="text-accent" href="/projects">projects</a></p>
+      <h1 class="mb-4 text-3xl font-semibold leading-[1.15] text-fg">{title}</h1>
+      <ul class="mb-4 flex list-none flex-wrap gap-x-6 gap-y-2 rounded-sm border border-border bg-elevated px-4 py-3 font-mono text-xs">
+        <li><span class="mr-2 uppercase tracking-[0.06em] text-subtle">Role</span><span class="text-fg">{role}</span></li>
+        {client && <li><span class="mr-2 uppercase tracking-[0.06em] text-subtle">Client</span><span class="text-fg">{client}</span></li>}
+        <li><span class="mr-2 uppercase tracking-[0.06em] text-subtle">Period</span><span class="text-fg">{period}</span></li>
       </ul>
-      <p class="outcome">{outcome}</p>
+      <p class="border-l-[3px] border-accent pl-3 text-md leading-normal text-fg">{outcome}</p>
     </header>
 
     <Prose>
@@ -31,70 +31,12 @@ const { title, role, client, period, stack, outcome } = project.data;
     </Prose>
 
     {stack.length > 0 && (
-      <section class="stack-section">
-        <h3>Stack</h3>
-        <ul class="stack">
-          {stack.map((s) => <li>{s}</li>)}
+      <section class="mt-12 border-t border-border pt-6">
+        <h3 class="mb-3 font-mono text-xs uppercase tracking-[0.06em] text-subtle">Stack</h3>
+        <ul class="flex list-none flex-wrap gap-1.5 p-0">
+          {stack.map((s) => <li class="rounded-sm border border-border bg-code px-2 py-[3px] font-mono text-xs text-muted">{s}</li>)}
         </ul>
       </section>
     )}
   </article>
 </BaseLayout>
-
-<style>
-  .head { margin-bottom: var(--space-8); }
-  .kicker { font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: var(--space-2); }
-  .kicker a { color: var(--accent); border-bottom: none; }
-  h1 { font-size: var(--fs-3xl); margin-bottom: var(--space-4); line-height: 1.15; }
-
-  .facts {
-    list-style: none;
-    padding: var(--space-3) var(--space-4);
-    margin: 0 0 var(--space-4);
-    background: var(--bg-elevated);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-2) var(--space-6);
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-  }
-  .facts .k { color: var(--fg-subtle); margin-right: var(--space-2); text-transform: uppercase; letter-spacing: 0.06em; }
-  .facts .v { color: var(--fg); }
-
-  .outcome {
-    font-size: var(--fs-md);
-    color: var(--fg);
-    line-height: 1.5;
-    padding-left: var(--space-3);
-    border-left: 3px solid var(--accent);
-  }
-
-  .stack-section { margin-top: var(--space-12); padding-top: var(--space-6); border-top: 1px solid var(--border); }
-  .stack-section h3 {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    color: var(--fg-subtle);
-    margin-bottom: var(--space-3);
-  }
-  .stack {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .stack li {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    color: var(--fg-muted);
-    background: var(--bg-code);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-sm);
-    padding: 3px 8px;
-  }
-</style>

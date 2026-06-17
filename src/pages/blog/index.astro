@@ -18,22 +18,23 @@ const allTags = Array.from(new Set(posts.flatMap((p) => p.data.tags))).sort();
 ---
 
 <BaseLayout title="Writing" description="Notes on AI systems, research, and engineering.">
-  <div class="page prose-width" style="margin-inline: auto;">
-    <header class="hero">
-      <p class="kicker">writing</p>
-      <h1>Notes</h1>
-      <p class="lede">Notes on AI systems, research, and engineering. {posts.length} posts so far.</p>
+  <div class="mx-auto max-w-content px-4 py-8 md:px-8 md:py-12">
+    <header class="mb-8">
+      <p class="mb-2 font-mono text-xs uppercase tracking-[0.08em] text-accent">writing</p>
+      <h1 class="mb-2 text-3xl font-semibold leading-tight text-fg">Notes</h1>
+      <p class="text-md text-muted">Notes on AI systems, research, and engineering. {posts.length} posts so far.</p>
     </header>
 
-    <div class="controls">
+    <div class="mb-8 flex flex-col gap-3">
       <input
         id="search"
+        class="w-full rounded-sm border border-border-strong bg-elevated px-3 py-2 font-mono text-fg"
         type="search"
         placeholder="Search posts…"
         aria-label="Search posts"
       />
       {allTags.length > 0 && (
-        <div class="tags">
+        <div class="flex flex-wrap gap-1.5">
           {allTags.map((t) => <TagPill tag={t} href={`/blog/tags/${t}`} size="sm" />)}
         </div>
       )}
@@ -41,14 +42,14 @@ const allTags = Array.from(new Set(posts.flatMap((p) => p.data.tags))).sort();
 
     <div id="results">
       {years.map((y) => (
-        <section class="year-block">
-          <h2 class="year">{y}</h2>
-          <div class="post-list">
+        <section class="mt-12 first:mt-0">
+          <h2 class="mb-2 border-b border-border pb-2 font-mono text-xs uppercase tracking-[0.08em] text-subtle">{y}</h2>
+          <div>
             {groupedByYear[y].map((p) => <PostCard post={p} />)}
           </div>
         </section>
       ))}
-      {posts.length === 0 && <p class="muted">No posts yet.</p>}
+      {posts.length === 0 && <p class="text-muted">No posts yet.</p>}
     </div>
   </div>
 
@@ -108,27 +109,3 @@ const allTags = Array.from(new Set(posts.flatMap((p) => p.data.tags))).sort();
     }
   </script>
 </BaseLayout>
-
-<style>
-  .hero { margin-bottom: var(--space-8); }
-  .kicker { font-family: var(--font-mono); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-bottom: var(--space-2); }
-  h1 { font-size: var(--fs-3xl); margin-bottom: var(--space-2); }
-  .lede { color: var(--fg-muted); font-size: var(--fs-md); }
-
-  .controls { display: flex; flex-direction: column; gap: var(--space-3); margin-bottom: var(--space-8); }
-  #search { width: 100%; font-family: var(--font-mono); }
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-
-  .year-block + .year-block { margin-top: var(--space-12); }
-  .year {
-    font-family: var(--font-mono);
-    font-size: var(--fs-xs);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--fg-subtle);
-    border-bottom: 1px solid var(--border);
-    padding-bottom: var(--space-2);
-    margin-bottom: var(--space-2);
-  }
-  .muted { color: var(--fg-muted); }
-</style>

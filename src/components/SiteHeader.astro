@@ -8,111 +8,36 @@ const isActive = (href: string) =>
   href === '/' ? path === '/' : path === href || path.startsWith(href + '/');
 ---
 
-<header class="site-header">
-  <div class="bar">
-    <a href="/" class="brand" aria-label="Home">
-      <span class="prompt">$</span>
-      <span class="name">{site.shortName}@melbourne</span>
+<header class="sticky top-0 z-50 border-b border-border bg-bg/80 backdrop-blur-[10px] backdrop-saturate-[180%]">
+  <div class="mx-auto flex max-w-page items-center gap-4 px-4 py-3 min-[720px]:px-8 min-[720px]:py-4">
+    <a href="/" class="inline-flex items-baseline gap-2 font-mono text-sm text-fg transition-colors duration-150 ease-out hover:text-accent" aria-label="Home">
+      <span class="text-accent">$</span>
+      <span class="text-fg">{site.shortName}@melbourne</span>
     </a>
 
-    <nav class="nav" aria-label="Primary">
+    <nav class="hidden flex-1 justify-center gap-4 min-[720px]:inline-flex" aria-label="Primary">
       {site.nav.map((item) => (
         <a
           href={item.href}
-          class:list={['nav-link', { active: isActive(item.href) }]}
+          class:list={[
+            'rounded-sm px-2 py-1 font-mono text-sm transition-colors duration-150 ease-out hover:text-fg',
+            isActive(item.href) ? 'text-accent' : 'text-muted',
+          ]}
         >
           {item.label}
         </a>
       ))}
       <a
         href="/cv.pdf"
-        class="nav-link cv"
+        class="inline-flex items-center gap-1 rounded-sm border border-border px-2 py-1 font-mono text-sm text-fg transition-colors duration-150 ease-out hover:border-accent hover:text-accent"
         target="_blank"
         rel="noopener"
         download
       >
-        CV <Icon name="lucide:arrow-down" class="cv-icon" aria-hidden="true" />
+        CV <Icon name="lucide:arrow-down" class="size-3.5" aria-hidden="true" />
       </a>
     </nav>
 
     <ThemeToggle />
   </div>
 </header>
-
-<style>
-  .site-header {
-    position: sticky;
-    top: 0;
-    z-index: 50;
-    background: color-mix(in oklab, var(--bg) 80%, transparent);
-    backdrop-filter: saturate(180%) blur(10px);
-    -webkit-backdrop-filter: saturate(180%) blur(10px);
-    border-bottom: 1px solid var(--border);
-  }
-
-  .bar {
-    max-width: var(--page-width);
-    margin: 0 auto;
-    padding: var(--space-3) var(--space-4);
-    display: flex;
-    align-items: center;
-    gap: var(--space-4);
-  }
-
-  .brand {
-    display: inline-flex;
-    align-items: baseline;
-    gap: var(--space-2);
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--fg);
-    border-bottom: none;
-  }
-
-  .brand:hover { color: var(--accent); }
-
-  .prompt { color: var(--accent); }
-  .name { color: var(--fg); }
-
-  .nav {
-    display: none;
-    flex: 1;
-    justify-content: center;
-    gap: var(--space-4);
-  }
-
-  .nav-link {
-    font-family: var(--font-mono);
-    font-size: var(--fs-sm);
-    color: var(--fg-muted);
-    border-bottom: none;
-    padding: var(--space-1) var(--space-2);
-    border-radius: var(--radius-sm);
-  }
-
-  .nav-link:hover { color: var(--fg); }
-
-  .nav-link.active {
-    color: var(--accent);
-  }
-
-  .nav-link.cv {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    color: var(--fg);
-    border: 1px solid var(--border);
-  }
-
-  .nav-link.cv:hover {
-    border-color: var(--accent);
-    color: var(--accent);
-  }
-
-  .cv-icon { width: 14px; height: 14px; }
-
-  @media (min-width: 720px) {
-    .nav { display: inline-flex; }
-    .bar { padding: var(--space-4) var(--space-8); }
-  }
-</style>
