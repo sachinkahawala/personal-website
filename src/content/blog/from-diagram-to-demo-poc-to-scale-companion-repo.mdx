@@ -5,24 +5,24 @@ pubDate: 2026-06-18
 tags: [ai-systems, workflows, production, langgraph, agent-framework]
 ---
 
-Architecture diagrams are easy to agree with. The harder test is what happens
-when the worker dies after a side effect, when a review waits for a human, or
-when a run needs to replay from the middle without corrupting the outside
-world.
+It's easy to nod along to an architecture diagram. The test I actually care
+about is what happens when the worker dies right after a side effect, or a
+review sits waiting for a human, or a run has to replay from the middle
+without corrupting the outside world.
 
-I built the companion repo to make that test concrete:
+So I built the companion repo:
 **[poc-to-scale-demo](https://github.com/sachinkahawala/poc-to-scale-demo)**.
 It turns the workflow runtime from the
 [previous post](/blog/from-poc-to-scale-long-running-ai-workflows) into
-something cloneable, runnable, and deployable.
+something you can clone, run, and deploy.
 
 The repo has one workflow definition, two runtime variants, two framework
-adapters, six executable scenarios, and an Azure deployment path. The goal is
-to make the architecture observable under failure, not just describe it.
+adapters, six executable scenarios, and an Azure deployment path, all
+arranged so you can watch the runtime misbehave and recover from a CLI.
 
 ## What the repo proves
 
-The repo is built around a small set of verifiable claims:
+It's built around claims you can check by running it:
 
 - The workflow definition can stay stable while the runtime changes beneath it.
 - Retry, replay, human review, crash recovery, and compensation should be
@@ -118,16 +118,16 @@ That file is byte-identical across every combination the repo supports:
 - Production runtime, on LangGraph
 - Production runtime, on Microsoft Agent Framework
 
-Four implementations share one definition, making the main architectural claim
-testable: production hardens the runtime, not the shape of the workflow.
+Four implementations share one definition - production hardens the runtime,
+not the shape of the workflow.
 
 ## Six executable scenarios
 
 The primary interface is the
 [`scenarios/`](https://github.com/sachinkahawala/poc-to-scale-demo/tree/main/scenarios)
-directory and the `demo` CLI that drives it. Each scenario is a YAML file that
-defines the input and the fault to inject. Each one maps to a runtime behavior
-that should be easy to inspect.
+directory and the `demo` CLI that drives it. Each scenario is a YAML file
+defining an input and a fault to inject, and each maps to a runtime behavior
+you can inspect from the CLI.
 
 ```bash
 git clone https://github.com/sachinkahawala/poc-to-scale-demo
@@ -155,7 +155,7 @@ uv run demo replay <run_id> --from decide
 | `compensation` | Forward effect lands, then `crm.cancel_case` compensates it |
 | `replay` | Upstream outcomes are reused; downstream outcomes are re-executed |
 
-The useful read order is also the useful run order.
+They're listed in the order I'd run them.
 
 **`happy`** is the baseline. The graph walks `classify`, then `enrich` and
 `fetch_refs`, then `decide`, then `handoff`. The trace tree
@@ -248,15 +248,12 @@ that the workflow has to roll back. The runtime calls `handoff`'s declared
 trace shows both the forward and the reverse on the same node. The outside
 world is left consistent without a manual cleanup script.
 
-**`replay`** demonstrates controlled re-execution from a recorded point in the
-run. `demo replay <run_id> --from decide` voids the outcomes of `decide` and
+**`replay`** re-executes from a recorded point in the run.
+`demo replay <run_id> --from decide` voids the outcomes of `decide` and
 everything downstream, then re-enqueues the run. The re-walk short-circuits
 every node whose recorded outcome is still valid (same input hash, same
 idempotency key, recorded outcome returned) and re-executes only the voided
 ones. The full history stays in the trace.
-
-Together, the scenarios turn the failure-modes table from the previous post
-into executable checks.
 
 ## POC and production runtimes
 
@@ -331,25 +328,25 @@ They differ in the runtime boundary:
 | Crash mid-run | the run is gone | redelivery resumes; recorded intent makes the retry idempotent |
 | Human review | blocks the process | parks the run; an event wakes it |
 
-The most useful comparison is `crash-mid-effect`. Under `--variant poc`, the
-run is gone with the process because state lived inside the process. Under
+The most useful comparison is `crash-mid-effect`. Under `--variant poc` the
+run is gone with the process, because state lived inside the process. Under
 `--variant prod`, queue redelivery and the intent/outcome ledger recover the
-run without duplicating the external effect. The comparison is observable
-rather than asserted: the two variants fail differently on the same input.
+run without duplicating the external effect. You can watch the two variants
+fail differently on the same input.
 
 ## Two frameworks, one runtime contract
 
-The repo implements every variant twice: once on
+The repo implements every variant twice - once on
 [LangGraph](https://github.com/langchain-ai/langgraph), once on
-[Microsoft Agent Framework](https://github.com/microsoft/agent-framework).
-Both call Azure OpenAI through the same model gateway. Both go through the
-same execute loop in `src/common/executor.py`. Every scenario passes under
-both with `--framework langgraph|msaf`.
+[Microsoft Agent Framework](https://github.com/microsoft/agent-framework) -
+with both calling Azure OpenAI through the same model gateway and running
+the same execute loop in `src/common/executor.py`. Every scenario passes
+under both with `--framework langgraph|msaf`.
 
 The detailed framework comparison lives in
 [`docs/LANGGRAPH_VS_MSAF.md`](https://github.com/sachinkahawala/poc-to-scale-demo/blob/main/docs/LANGGRAPH_VS_MSAF.md).
-The important boundary for this post is that most production durability does
-not live in either graph framework. It lives in `src/common/`:
+What stood out building both is that most production durability does not
+live in either graph framework. It lives in `src/common/`:
 
 - the intent/outcome ledger
 - the effect-recovery arm (query the world by request id after a crash)
@@ -358,10 +355,10 @@ not live in either graph framework. It lives in `src/common/`:
 - the task queue between scheduler and workers
 - replay as a first-class operation over recorded inputs
 
-This boundary separates graph execution from the durability of the workflow's
-relationship with the outside world. The repo makes that separation visible by
-running the same definition on two graph runtimes and keeping the recovery
-contract common.
+Most of what makes the system durable has nothing to do with the graph
+framework - it's the ledger, the recovery arm, the compensations, the
+gateway, and the queue. Running the same definition on two frameworks with
+one shared recovery contract is how the repo makes that visible.
 
 ## Local, Docker, and Azure execution
 
@@ -549,9 +546,8 @@ to node ids, so the trace tree in the portal is the graph from
 
 ## What is intentionally out of scope
 
-The repo stays focused on runtime patterns. Several production concerns are
-intentionally excluded because they would not change the contracts being
-demonstrated:
+Several production concerns are deliberately left out because they wouldn't
+change the contracts being demonstrated:
 
 - **Auth.** The CLI, scheduler `/review` endpoint, and demo credentials are
   local-dev-only. The repo demonstrates runtime patterns rather than service
@@ -567,9 +563,8 @@ demonstrated:
   that exposes a queryable request id, the same shape as the post's
   idempotent-effect example, none of the third-party plumbing.
 
-Each of these would be a real engineering decision in a production
-deployment. None of them changes the runtime contract the repo is designed to
-demonstrate.
+Each of these would be a real decision in a production deployment, but none
+of them changes the runtime contract the repo demonstrates.
 
 ## Where to start
 
@@ -587,12 +582,12 @@ The fastest way to evaluate the repo is:
    doing what it claims.
 
 The previous post ended with a promise to cover end-to-end workflow
-evaluation. Before doing that well, the runtime needed to be executable and
-observable; this companion repo supplies that foundation. Its six scenarios
-verify execution behavior under failure. The evaluation work comes next,
-using representative cases, workflow-level scoring, and regression checks to
-measure whether the complete workflow produces the right result.
+evaluation, and that post now exists:
+[Evals for workflows, not just nodes](/blog/evals-for-workflows-not-just-nodes),
+with its own companion repo that pins and evaluates this one. The runtime
+needed to be executable and observable before evaluation could mean much,
+which is what this repo is for.
 
-Until then, I hope the repo gives you a practical place to test these ideas in
-your own systems. If you find a failure mode the six scenarios miss, I would be
-glad to hear about it.
+I hope it gives you a practical place to test these ideas in your own
+systems. If you find a failure mode the six scenarios miss, I would be glad
+to hear about it.

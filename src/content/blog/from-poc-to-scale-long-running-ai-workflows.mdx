@@ -5,15 +5,30 @@ pubDate: 2026-06-07
 tags: [ai-systems, workflows, production, multi-agent]
 ---
 
-In one of the most recent client projects I worked on, the problem we were solving wasn’t really a typical chatbot problem. It also wasn’t just about building a single agent. It was a process. A sequence of decisions and actions a team of humans used to do over hours or days, with branches, reviews, and pauses. The interesting questions stopped being about prompts and tools a while back. They're about how you run something that takes a long time, fails halfway through, and has to be safe to retry.
+In one of the most recent client projects I worked on, the problem was not really a chatbot problem. It was not a single agent either.
 
-I keep reaching for the same mental model. *The workflow is a graph.* Nodes are typed. The runtime walks the graph. Everything else, from how state is stored to how concurrency is handled, falls out of that one decision.
+It was a process. A sequence of decisions and actions a team of humans used to do over hours or days, with branches, reviews, and pauses.
 
-This is the version of the post I wish someone had handed me a year ago. What I mean by graph. What works in a POC. Where the POC breaks. What production actually looks like once a client is depending on it.
+The interesting questions stopped being about prompts and tools a while back. They are about how you run something that takes a long time, fails halfway through, and has to be safe to retry.
+
+I keep coming back to the same mental model: *the workflow is a graph*. Typed nodes. A runtime that walks it.
+
+Most other decisions - where state lives, how concurrency works, what a retry means - follow from that one.
+
+This is the post I wish someone had handed me a year ago.
 
 ## Workflows as graphs
 
-The way I keep ending up thinking about a workflow is as a directed graph the team draws once. Nodes are units of work with a typed input and a typed output. Edges are transitions, optionally guarded by a condition on the previous node's output. The four node kinds I tend to settle on are `det` (deterministic code), `llm` (a single model call with a schema in and a schema out), `human` (parks the run and waits for a review), and `effect` (does something the outside world can see).
+A workflow is a directed graph the team draws once.
+
+A node is a unit of work with typed input and output. An edge is a transition, optionally guarded by a condition on the previous node's output.
+
+Four node kinds have covered everything I needed so far:
+
+- `det` - deterministic code
+- `llm` - one model call, schema in, schema out
+- `human` - parks the run and waits for a review
+- `effect` - does something the outside world can see
 
 The graph is data, not code. The same workflow as a definition file:
 
@@ -55,7 +70,9 @@ edges:
   - { from: review,                  to: handoff,    when: "approved" }
 ```
 
-The runtime that walks this graph is a separate concern. When the runtime gets harder, the definition doesn't move. Every node implements the same small contract:
+The runtime that walks this graph is a separate concern. When the runtime gets harder later, this file does not move.
+
+Every node implements the same small contract:
 
 ```python
 from typing import Protocol, runtime_checkable
@@ -77,9 +94,13 @@ class Node(Protocol):
     async def run(self, inp: BaseModel, ctx: Context) -> BaseModel: ...
 ```
 
-`idempotency_key` lifts a question that gets murkier the longer you ignore it: what does it mean to run this node twice? For `det` and `llm` nodes the key is usually a hash of the input. For `effect` nodes the key is the bridge to the outside world. We'll come back to it.
+`idempotency_key` forces an early answer to an awkward question: what does it mean to run this node twice?
 
-This is the part I find easy to skip when reaching for a free-form ReAct loop. ReAct treats the trajectory as something the model invents at runtime. For a chatbot that's mostly fine. For work where the answer I want is "do these eight things in this order, branch if the third one comes back ambiguous, and pause for a human if the confidence is below 0.8", I'd rather pin that shape down before the model runs.
+For `det` and `llm` nodes the key is usually a hash of the input. For `effect` nodes it is the bridge to the outside world. More on that below.
+
+This is the part I find easy to skip when reaching for a free-form ReAct loop. ReAct treats the trajectory as something the model invents at runtime. For a chatbot, mostly fine.
+
+For work where the answer is "do these eight things in this order, branch if the third one comes back ambiguous, pause for a human if confidence is below 0.8", I want that shape pinned down before the model runs.
 
 <figure>
   <svg viewBox="0 0 1024 320" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
@@ -207,15 +228,23 @@ This is the part I find easy to skip when reaching for a free-form ReAct loop. R
   <figcaption>The POC. One process owns the graph, the state, and the call stack. Sync model calls, direct effects, retries ad hoc.</figcaption>
 </figure>
 
-The first version of every system I've built like this looks roughly the same. A single process holds the graph in memory. It walks the nodes in order, calls the model inline for `llm` nodes, runs the code inline for `det` nodes, holds the partial state in a dictionary. `human` nodes are a TODO. `effect` nodes are mocked.
+The first version of every system I have built like this looks roughly the same.
 
-You demo it and it works, because the constraints you've quietly chosen are doing most of the work: small graph, short horizon, your own input, the model behaves. The thing I've fallen for is reading the success of the POC as evidence that the architecture is sound. It usually isn't. It's reasonable for the size of the problem. Each constraint becomes a hole the moment the workflow is real.
+One process holds the graph in memory. It walks the nodes in order, calls the model inline, runs the deterministic code inline, keeps partial state in a dictionary. `human` nodes are a TODO. `effect` nodes are mocked.
+
+You demo it and it works. Mostly because of the constraints you quietly chose: small graph, short horizon, your own inputs, a model that behaves.
+
+The mistake I keep making is reading POC success as evidence the architecture is sound. It usually is not. It is evidence the problem was small. Each constraint becomes a hole the moment the workflow is real.
 
 ## Where the POC breaks
 
-Per-node success rates aren't 100%. Call them 99% for a tuned `llm` node and higher for `det`. A 20-node workflow at 99% per node lands at `0.99^20 ≈ 0.82` end to end. A three-nines per-node target gets you to `0.999^20 ≈ 0.98`. The headline isn't the number. It's that POC code which assumes everything succeeds is reasoning about a regime that doesn't exist.
+Per-node success rates are not 100%. Call them 99% for a tuned `llm` node and higher for `det`.
 
-The same arithmetic recurs for every failure surface the POC fused into one process: latency, memory, concurrency, idempotency, observability, and human review. Each one is a separate fix.
+A 20-node workflow at 99% per node is `0.99^20 ≈ 0.82` end to end. Three nines per node gets you to `0.999^20 ≈ 0.98`.
+
+POC code that assumes everything succeeds is reasoning about a regime that does not exist.
+
+The same thing repeats for every failure surface the POC fused into one process: latency, memory, concurrency, idempotency, observability, human review. Each one is a separate fix.
 
 | Failure mode | POC behaviour | Production fix |
 | --- | --- | --- |
@@ -230,7 +259,7 @@ The pattern I keep seeing across these rows is the same. The POC stored state in
 
 ## What production looks like
 
-What's worked for me isn't bigger boxes. It's separating two things the POC fused: the workflow definition and the workflow runtime.
+The fix was not bigger boxes. It was separating the two things the POC fused: the workflow definition and the workflow runtime.
 
 <figure>
   <svg viewBox="0 0 1024 656" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
@@ -319,13 +348,13 @@ What's worked for me isn't bigger boxes. It's separating two things the POC fuse
   <figcaption>The production layout. The scheduler is the only piece that knows the graph. Workers know how to run a single node. Everything else is durable storage or an external dependency.</figcaption>
 </figure>
 
-Definitions are versioned data. The graph for a workflow lives in a store with a version. A run is bound to a version forever. A deploy that changes the graph doesn't change the meaning of an in-flight run.
+Definitions become versioned data. The graph lives in a store with a version. A run is bound to its version forever, so a deploy cannot change the meaning of an in-flight run.
 
-State is durable, written after every node transition. The run is identified by an opaque id. Every node's input and output is persisted alongside the state, so you can reconstruct exactly what happened.
+State is durable, written after every node transition. Every node's input and output is persisted, so you can reconstruct exactly what happened.
 
-Node executions are messages on a queue. The runtime doesn't loop through the graph in process. It enqueues "execute node `n` of run `r` at attempt `k`" as a task. A pool of stateless workers picks tasks up. Crashes become boring. The task is redelivered, another worker handles it.
+Node executions become queue messages: "execute node `n` of run `r` at attempt `k`". Stateless workers pick them up. A crash stops being an event - the task gets redelivered, another worker takes it.
 
-Workers are stateless. The contract is the same everywhere. Derive the idempotency key, check the state store, do the work only if there is no recorded outcome.
+The worker contract is the same everywhere: derive the idempotency key, check the state store, only do the work if there is no recorded outcome.
 
 ```python
 async def execute(task: Task) -> None:
@@ -351,7 +380,7 @@ async def execute(task: Task) -> None:
     await queue.ack(task, out)
 ```
 
-The intent record is what turns the worker loop from "retry safe in the common case" into "retry safe under crashes". Watch what happens when an `effect` node crashes after the side effect but before the outcome is written:
+The intent record is what turns this from "retry safe in the common case" into "retry safe under crashes". Here is an `effect` node crashing after the side effect lands but before the outcome is written:
 
 <figure>
   <svg viewBox="0 0 768 480" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
@@ -417,7 +446,7 @@ The intent record is what turns the worker loop from "retry safe in the common c
   <figcaption>The crash is invisible to the outside world. The intent record makes the retry idempotent because the effect knows how to look itself up by the request id we passed through.</figcaption>
 </figure>
 
-For effects that can't be queried after the fact (a payment, a ticket, an outbound webhook), the graph declares a compensating action that runs if the workflow later fails or is cancelled. Forward and reverse live on the same node:
+Some effects cannot be queried after the fact - a payment, a ticket, an outbound webhook. For those, the graph declares a compensating action that runs if the workflow later fails or is cancelled. Forward and reverse live on the same node:
 
 ```python
 class HandoffNode:
@@ -434,16 +463,22 @@ class HandoffNode:
         await crm.cancel_case(out.case_id, reason="workflow rolled back")
 ```
 
-The rest of the architecture is what supports this. A model gateway owns rate limits, budgets, and prompt caching. All `llm` nodes call through it. When the provider degrades, exactly one place knows. Human review is a node type, not a side effect. A `review` node pushes a task on a review queue, records the requirement on the run's state, and parks the run. When the review is acknowledged elsewhere, an event wakes the run via the scheduler. Every run produces a trace whose structure mirrors the graph. The workflow definition is the schema for the trace. Replays are first-class: pick a run, pick a node, replay from there with the recorded inputs.
+The rest of the architecture supports this loop.
 
-None of these moves are novel on their own. The same shape is recognisable from Temporal, Step Functions, Airflow, and durable execution systems generally. The novelty is in deciding that long-running LLM workflows belong in that category, rather than treating them as a thing that lives inside a chatbot framework.
+A model gateway owns rate limits, budgets, and prompt caching. All `llm` nodes call through it. When the provider degrades, one place knows.
+
+Human review is a node type, not a side effect. A `review` node records the requirement, parks the run, and an event wakes it later. Nothing blocks while a human thinks.
+
+Every run produces a trace shaped like the graph. The definition is effectively the schema for the trace. Replays are first-class: pick a run, pick a node, replay from there with the recorded inputs.
+
+None of these moves are novel. Temporal, Step Functions, Airflow - durable execution systems generally - all have this shape. The decision that matters is putting long-running LLM workflows in that category instead of inside a chatbot framework.
 
 ## What this buys you
 
-Runs become independent of any single process. Deploys don't drop runs. Crashes don't drop runs. A run can fan out into thousands of parallel sub-runs, each persisted, each retryable. Replays are a regular operation, not an incident.
+Runs stop depending on any single process. Deploys do not drop runs. Crashes do not drop runs. A run can fan out into thousands of parallel sub-runs, each persisted, each retryable. Replay is an operation, not an incident.
 
 The quieter change is what it does to the way you build. Once the graph is the artefact, the model call stops being the centre of gravity. You spend more time on the shape of the work and less on the prompt. That turns out to be where most of the leverage was anyway.
 
 ## What's next
 
-A second post needs to follow this one. How you evaluate a workflow like this end to end. Per-node evals are necessary, but they don't tell you whether the workflow as a whole is doing the right thing. I'll write that one next.
+The follow-up exists now: [evals for workflows, not just nodes](/blog/evals-for-workflows-not-just-nodes). Per-node evals are necessary, but they do not tell you whether the workflow as a whole did the right thing.

@@ -1,0 +1,687 @@
+---
+title: 'Evals for workflows, not just nodes'
+description: 'Per-node evals stay green while the workflow does the wrong thing. Evaluating workflows end to end: representative cases, workflow-level scoring over recorded runs, and a regression gate.'
+pubDate: 2026-07-02
+tags: [ai-systems, workflows, evals, production]
+---
+
+The [previous repo](/blog/from-diagram-to-demo-poc-to-scale-companion-repo)
+made the workflow runtime executable. This one is about evaluating it.
+
+The repo is
+[workflow-evals-demo](https://github.com/sachinkahawala/workflow-evals-demo).
+It pins [poc-to-scale-demo](https://github.com/sachinkahawala/poc-to-scale-demo),
+runs the same case-triage workflow against 40 labelled cases, scores the
+whole run, and compares the result against a committed baseline.
+
+The main thing I wanted to test was simple: per-node evals are not enough.
+
+## The system under test
+
+Case triage, from the earlier posts. A support case comes in. `classify`
+labels it. `enrich` and `fetch_refs` add context. `decide` picks an action -
+escalate, resolve, or reassign - with a confidence. `handoff` writes the
+result to a CRM.
+
+One edge matters more than the rest: if confidence is below `0.8`, the run
+parks at a human `review` before anything touches the CRM. Approve and the
+handoff proceeds. Reject and it never happens.
+
+Every run leaves durable records behind. That was the previous repo's whole
+job:
+
+- a run row
+- every node's input and output, keyed by `(run_id, node_id, attempt)`
+- review rows
+- outbox rows - the demo CRM, queryable by request id
+
+If you have not read the earlier posts: the outbox stands in for the
+external system. It is the world's copy of what the workflow did.
+
+The thing being evaluated is not any single node. It is the run.
+
+## Where per-node evals fall short
+
+I had node-level evals early. They were useful, but they missed the failures
+I actually cared about.
+
+The `decide → review` edge fires when confidence is below `0.8`.
+
+That `0.8` decides which cases a human sees.
+
+But it is not inside any node. So I can test `decide` forever and still not
+test the policy that routes the run.
+
+Same with effects. A run can say `completed`, but that does not mean the
+CRM/outbox is correct. Maybe there is one case. Maybe there are two. Maybe a
+reviewer rejected it and the case still got created.
+
+Per-node checks do not see that.
+
+There is also the normal compounding problem. A slightly wrong `classify`
+can send the wrong frame into `enrich`. `enrich` then produces a locally
+valid output for the wrong input. Every node looks green, but the actual run
+is wrong.
+
+So this eval scores the run, not the boxes.
+
+<figure class="figure-wide">
+  <svg viewBox="0 0 1024 400" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
+    <title>The case-triage DAG with two overlays. A small dashed box tight around the enrich node marks what a per-node eval sees. A large dashed box around the whole graph plus the CRM outbox marks what the workflow eval sees. Beneath the diagram, annotations name what lives between the nodes: the routing policy on the decide edge, error compounding across edges, and the outside world reached through the outbox.</title>
+    <style>{`
+      .e1 text { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; dominant-baseline: middle; text-anchor: middle; }
+      .e1 .node { fill: var(--bg-elevated); stroke: currentColor; stroke-width: 2; }
+      .e1 .node-accent { fill: var(--bg-elevated); stroke: var(--accent); stroke-width: 2; }
+      .e1 .lbl { font-size: 13px; fill: currentColor; }
+      .e1 .lbl-accent { font-size: 13px; fill: var(--accent); }
+      .e1 .lbl-sub { font-size: 10px; fill: var(--fg-muted); }
+      .e1 .edge { fill: none; stroke: currentColor; stroke-width: 2; }
+      .e1 .edge-accent { fill: none; stroke: var(--accent); stroke-width: 2; }
+      .e1 .scope-node { fill: none; stroke: var(--fg-muted); stroke-width: 1.5; stroke-dasharray: 4 4; }
+      .e1 .scope-flow { fill: none; stroke: var(--accent); stroke-width: 1.5; stroke-dasharray: 6 5; }
+    `}</style>
+    <defs>
+      <marker id="e1-fg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+      </marker>
+      <marker id="e1-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+      </marker>
+    </defs>
+    <g class="e1">
+      <rect x="0" y="0" width="1024" height="400" rx="8" fill="var(--bg-elevated)" />
+
+      <rect class="scope-flow" x="24" y="16" width="976" height="300" rx="10" />
+      <text x="852" y="34" class="lbl-sub" text-anchor="start">what the workflow eval sees</text>
+
+      <rect class="node" x="48" y="136" width="120" height="48" rx="8" />
+      <text x="108" y="160" class="lbl">classify</text>
+
+      <rect class="scope-node" x="228" y="36" width="144" height="72" rx="10" />
+      <text x="300" y="28" class="lbl-sub">what a per-node eval sees</text>
+      <rect class="node" x="240" y="48" width="120" height="48" rx="8" />
+      <text x="300" y="72" class="lbl">enrich</text>
+
+      <rect class="node" x="240" y="224" width="120" height="48" rx="8" />
+      <text x="300" y="248" class="lbl">fetch_refs</text>
+
+      <rect class="node" x="432" y="136" width="120" height="48" rx="8" />
+      <text x="492" y="160" class="lbl">decide</text>
+
+      <rect class="node" x="624" y="48" width="120" height="48" rx="8" stroke-dasharray="6 4" />
+      <text x="684" y="72" class="lbl">review</text>
+
+      <rect class="node-accent" x="816" y="136" width="120" height="48" rx="8" />
+      <text x="876" y="160" class="lbl-accent">handoff</text>
+
+      <rect class="node-accent" x="816" y="240" width="120" height="48" rx="8" stroke-dasharray="3 3" />
+      <text x="876" y="264" class="lbl-accent">CRM outbox</text>
+      <text x="876" y="304" class="lbl-sub">the world's copy of the run</text>
+
+      <g class="edge" marker-end="url(#e1-fg)">
+        <path d="M168,148 C204,148 204,72 240,72" />
+        <path d="M168,172 C204,172 204,248 240,248" />
+        <path d="M360,72 C396,72 396,148 432,148" />
+        <path d="M360,248 C396,248 396,172 432,172" />
+        <path d="M552,148 C588,148 588,72 624,72" />
+        <path d="M744,72 C780,72 780,148 816,148" />
+        <path d="M552,172 L816,172" />
+      </g>
+      <text x="588" y="112" class="lbl-sub">{'confidence < 0.8'}</text>
+      <text x="684" y="190" class="lbl-sub">{'confidence >= 0.8'}</text>
+
+      <g class="edge-accent" marker-end="url(#e1-a)">
+        <path d="M876,184 L876,240" />
+      </g>
+
+      <text x="512" y="344" class="lbl-sub">between the nodes: the 0.8 gate is policy that no node owns,</text>
+      <text x="512" y="362" class="lbl-sub">errors compound across edges, and a completed run can disagree with the outbox.</text>
+    </g>
+  </svg>
+  <figcaption>Per-node evals score the boxes. Routing, compounding, and side effects live between the boxes and outside the graph.</figcaption>
+</figure>
+
+## Scoring recorded runs
+
+The runtime already records most of what I needed:
+
+- run row
+- node inputs and outputs
+- attempt numbers
+- review rows
+- outbox rows
+
+That was originally for crash recovery and replay, not evals.
+
+But it works nicely for evals too.
+
+The harness runs a case, reads the state store back, and turns it into one
+flat record: route, decision, effects, attempts.
+
+No extra instrumentation.
+
+<figure class="figure-wide">
+  <svg viewBox="0 0 1024 300" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
+    <title>Left to right: the run executes under the scheduler and workers, writing durable state as it goes. The durable state holds the run row, node attempts with intent and outcome, review rows, and the outbox. After the run, extraction reads those records into a flat RunRecord holding route, decision, effects, and attempts. Scorers read the RunRecord, and their summary is compared against a committed baseline that either passes or blocks.</title>
+    <style>{`
+      .e2 text { font-family: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace; dominant-baseline: middle; text-anchor: middle; }
+      .e2 .box { fill: var(--bg-elevated); stroke: currentColor; stroke-width: 2; }
+      .e2 .box-accent { fill: var(--bg-elevated); stroke: var(--accent); stroke-width: 2; }
+      .e2 .lbl { font-size: 13px; fill: currentColor; }
+      .e2 .lbl-accent { font-size: 13px; fill: var(--accent); }
+      .e2 .lbl-sub { font-size: 10px; fill: var(--fg-muted); }
+      .e2 .edge { fill: none; stroke: currentColor; stroke-width: 2; }
+      .e2 .edge-accent { fill: none; stroke: var(--accent); stroke-width: 2; }
+    `}</style>
+    <defs>
+      <marker id="e2-fg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="currentColor" />
+      </marker>
+      <marker id="e2-a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0,0 L10,5 L0,10 z" fill="var(--accent)" />
+      </marker>
+    </defs>
+    <g class="e2">
+      <rect x="0" y="0" width="1024" height="300" rx="8" fill="var(--bg-elevated)" />
+
+      <rect class="box" x="32" y="96" width="160" height="80" rx="8" />
+      <text x="112" y="128" class="lbl">run executes</text>
+      <text x="112" y="150" class="lbl-sub">scheduler + workers</text>
+
+      <rect class="box" x="256" y="64" width="240" height="144" rx="8" />
+      <text x="376" y="90" class="lbl">durable state</text>
+      <text x="376" y="116" class="lbl-sub">run row</text>
+      <text x="376" y="134" class="lbl-sub">node attempts (intent, outcome)</text>
+      <text x="376" y="152" class="lbl-sub">review rows</text>
+      <text x="376" y="170" class="lbl-sub">outbox</text>
+      <text x="376" y="228" class="lbl-sub">the same records that power</text>
+      <text x="376" y="244" class="lbl-sub">crash recovery and replay</text>
+
+      <rect class="box" x="560" y="96" width="160" height="80" rx="8" />
+      <text x="640" y="128" class="lbl">RunRecord</text>
+      <text x="640" y="150" class="lbl-sub">route, decision,</text>
+      <text x="640" y="164" class="lbl-sub">effects, attempts</text>
+
+      <rect class="box" x="784" y="56" width="192" height="64" rx="8" />
+      <text x="880" y="82" class="lbl">scorers</text>
+      <text x="880" y="102" class="lbl-sub">deterministic first</text>
+
+      <rect class="box-accent" x="784" y="168" width="192" height="64" rx="8" />
+      <text x="880" y="194" class="lbl-accent">regression gate</text>
+      <text x="880" y="214" class="lbl-sub">vs committed baseline</text>
+
+      <g class="edge" marker-end="url(#e2-fg)">
+        <line x1="192" y1="136" x2="256" y2="136" />
+        <line x1="496" y1="136" x2="560" y2="136" />
+        <path d="M720,120 C752,110 752,98 784,92" />
+      </g>
+      <g class="edge-accent" marker-end="url(#e2-a)">
+        <line x1="880" y1="120" x2="880" y2="168" />
+      </g>
+      <text x="224" y="120" class="lbl-sub">writes</text>
+      <text x="528" y="120" class="lbl-sub">reads</text>
+    </g>
+  </svg>
+  <figcaption>The records the runtime writes to survive crashes are the records the scorers read.</figcaption>
+</figure>
+
+Route correctness becomes: which nodes recorded outcomes?
+
+Effect consistency becomes: how many outbox rows exist?
+
+That is the whole trick.
+
+The scorers are:
+
+| Scorer | What it checks | Kind |
+| --- | --- | --- |
+| `outcome_match` | did the run finish with the expected action? | deterministic |
+| `route_match` | did review happen exactly when policy says it should? | deterministic |
+| `effect_consistency` | does the outbox agree with the run? | deterministic |
+| `budget` | did a clean run need retries it should not need? | deterministic |
+| `rationale_judge` | does the rationale match the action? | judge |
+
+The judge is the only model-graded one. It gets its own section below.
+
+`budget` looks trivial in stub mode - no faults are injected, so any retry
+is a bug. In real mode it is where cost and latency policy would go:
+attempts per node, tokens per run, spend per run. Those are workflow
+properties too. A change that doubles retries can pass every quality check.
+
+Failures come with evidence attached. Every scorer writes an explanation
+into the eval log, so a `route_match` failure reads
+`route=direct expected=review confidence=0.77` and you know which threshold
+to stare at. `inspect view` shows the same thing per case.
+
+## Dataset
+
+There are 40 cases.
+
+| Group | Cases | Policy |
+| --- | ---: | --- |
+| clear-incident | 12 | clear incidents skip review and escalate |
+| ambiguous | 12 | uncertain reports must go to human review |
+| non-incident | 8 | requests/questions should route without review |
+| degenerate | 8 | empty, huge, injection-shaped, misleading inputs |
+
+The labels are terminal only:
+
+- expected route
+- expected action
+- whether handoff is allowed
+
+I did not label intermediate node outputs. That just turns the dataset into
+a second implementation. Then every refactor breaks the eval even when
+behaviour is still fine.
+
+Example:
+
+```yaml
+- id: amb-003
+  group: ambiguous
+  must_pass: true
+  input:
+    subject: "Occasional timeout errors from the API"
+    body: >-
+      We occasionally see timeout errors in the client. Not sure if it is
+      our network or your API.
+    reporter: partner-integrations
+  expected: { route: review, action: escalate }
+```
+
+The important bit is `route: review`.
+
+That is a policy statement. A human must see this kind of case.
+
+Before the dataset, the policy was basically hiding inside the `0.8`
+threshold. Writing the cases forced it into the open.
+
+Where the cases come from, for v1:
+
+- the policy groups above, written by hand
+- known weaknesses I wanted on the record
+- degenerate inputs: empty body, a 5,000-character log dump, HTML,
+  injection-shaped text
+
+After go-live there is a better source. Every production run already leaves
+the same records the eval reads, so a real run becomes a case by adding
+labels. Incidents especially - every "how did this reach the CRM"
+conversation should end as a new must_pass case.
+
+Some cases are marked `must_pass`. If one of those fails, the release fails.
+I do not want an average hiding something like "a rejected case reached the
+CRM".
+
+Two degenerate cases fail in the baseline. I left them failing.
+
+The keyword classifier treats "nothing is down anymore" as an incident. It
+also treats a question about error budgets as an incident. Both are wrong,
+and the baseline shows that. So the baseline is 95% on `outcome_match`, not
+100%.
+
+That is fine. I would rather have known failures visible than a dataset
+reverse-engineered to make the system look perfect.
+
+Also, 40 cases is tiny. One case is 2.5 points. So I do not read too much
+into small pass-rate changes. The gate is blunt on purpose.
+
+## The judge
+
+One scorer is model-graded, and it needs more care than the other four
+combined.
+
+The rule I follow: if a deterministic check can answer the question, it is
+not a judge question. Routing is deterministic. Effects are countable. The
+only thing left in this workflow is whether the free-text rationale actually
+supports the decision, and there is no field comparison for that.
+
+How the repo's judge works:
+
+- output is `JudgeVerdict { consistent: bool, reason: str }`. Binary on
+  purpose - a 1-10 score is ten thresholds to argue about, a boolean is one.
+- the rubric is in the system prompt and it is strict: a rationale that does
+  not say why this action fits this case is inconsistent.
+- it calls through the same gateway as the workflow, with the judge model
+  pinned. A silent judge-model upgrade shifts every score with no code
+  change. That invalidates the baseline, so it has to be a deliberate,
+  versioned event.
+
+Judges have known failure modes: verbosity bias (longer answers score
+better), leniency (models like saying yes), self-preference (a model rating
+its own family's output). The binary verdict and the strict rubric are the
+mitigations here. They are not a guarantee.
+
+So the repo ships a calibration set: 15 rationales with hand-assigned
+labels, including content contradictions, paraphrases, keyword stuffing, and
+truncated fragments. `evals calibrate-judge` runs the judge over them and
+reports agreement with my labels:
+
+```
+│ cal-007 │ inconsistent │ consistent   │ disagree │
+│ cal-008 │ inconsistent │ consistent   │ disagree │
+│ cal-009 │ consistent   │ inconsistent │ disagree │
+│ cal-014 │ inconsistent │ consistent   │ disagree │
+
+agreement: 11/15 (73%) - judge: stub (structural check)
+```
+
+Without a model endpoint the judge is a structural check - action named,
+category named, minimum length. 73% agreement, and the four misses are the
+interesting part:
+
+- cal-007 and cal-008 are structurally perfect rationales whose content
+  contradicts the action. "Production is down for all users; recommending
+  resolve as no action is needed" passes a structural check.
+- cal-009 is a good rationale that paraphrases - it supports escalation
+  without using the word "escalate". The structural check fails it.
+- cal-014 is keyword stuffing. Right words, says nothing.
+
+Those four are exactly what a real judge model is for.
+
+Against a real model, the same command is the calibration loop: run it, read
+the disagreements, fix the rubric before touching any threshold. Re-run it
+whenever the judge model or the rubric changes.
+
+15 labels is a start, not a result. But the set exists and the loop is one
+command.
+
+## Harness
+
+The eval runs the parent repo's runtime in process.
+
+Each case gets:
+
+- in-memory state store
+- in-process broker
+- fresh checkpointer
+
+`submit_run` puts an advance task on the broker. `handle_task` walks the
+graph. If the run parks for review, the harness approves it and resumes,
+except for the one case where the expected review decision is reject.
+
+The annoying part was stub mode.
+
+The parent repo's stub gateway returns schema-valid output, but it is
+input-independent. Every float comes back as `0.9`. So every case sailed
+past the `0.8` review gate and the dataset tested almost nothing.
+
+I did not patch the parent repo. I subclassed the gateway in the eval repo.
+
+The eval stub reads the case text and lowers confidence for hedged phrases
+like:
+
+- intermittent
+- cannot reproduce
+- not sure
+
+It is crude, but deterministic and documented. More importantly, it gives
+the graph actual routing decisions to make.
+
+There was also one small [Inspect AI](https://inspect.aisi.org.uk/) gotcha:
+task files run with the task file's directory as the working directory. That
+broke relative paths to the dataset and workflow definitions. I anchored
+them to the repo root.
+
+Inspect was still the right tool for this. Dataset, solver, scorer map well
+to the problem. It gives logs and a local viewer. No hosted platform. No API
+key needed.
+
+The `--model` flag points at a mock model because Inspect requires it, but
+the workflow never calls it in stub mode.
+
+Stub mode also buys determinism: one run per case is enough, and the same
+inputs give the same numbers on any machine.
+
+Real mode is not like that. The same case can route differently on two runs
+when the confidence lands near the threshold. Inspect handles repetition
+natively - `--epochs 3` runs every case three times. For must_pass cases the
+right rule is pass-every-epoch, not pass-on-average; the repo's summary
+currently assumes one epoch, so that rule is on the list, not in the code.
+
+Stub mode does not say anything about model quality. It does catch routing,
+review behaviour, and effect consistency, because those live in the
+workflow/runtime, not the model.
+
+Real mode uses the same env vars as the parent repo. That is where judge
+calibration and the injection-shaped cases start to matter.
+
+## Gate
+
+The baseline lives in `baselines/stub-langgraph.json`.
+
+It stores:
+
+- per-scorer pass rates
+- pass rates by group
+- failed must-pass ids
+
+CI reruns the eval and blocks if:
+
+- any must-pass case fails
+- any scorer drops by more than five points
+
+CI also runs a known-bad candidate and checks that the gate actually blocks
+it.
+
+Same reason I test alerts. If it has never fired, I do not really know it
+works.
+
+## Demo 1: lowering the review threshold
+
+The known-bad candidate changes only the routing threshold:
+
+```diff
+-  - { from: decide,  to: review,   when: "confidence < 0.8" }
+-  - { from: decide,  to: handoff,  when: "confidence >= 0.8" }
++  - { from: decide,  to: review,   when: "confidence < 0.6" }
++  - { from: decide,  to: handoff,  when: "confidence >= 0.6" }
+```
+
+No node changed.
+
+So every per-node eval still passes.
+
+One ambiguous case under both definitions:
+
+```js
+// baseline
+{
+  "decision": {
+    "action": "escalate",
+    "confidence": 0.62
+  },
+  "route": "review",
+  "visited": [..., "review", "handoff"],
+  "outbox_rows": 1
+}
+
+// candidate
+{
+  "decision": {
+    "action": "escalate",
+    "confidence": 0.62
+  },
+  "route": "direct",
+  "visited": [..., "handoff"],
+  "outbox_rows": 1
+}
+```
+
+Same decision. Same confidence.
+
+Only difference: the human never saw it.
+
+Full eval:
+
+```bash
+uv run inspect eval src/evals/task.py --model mockllm/model
+uv run inspect eval src/evals/task.py --model mockllm/model \
+  -T workflow=workflows/candidate.yaml
+uv run evals compare logs/<baseline>.eval logs/<candidate>.eval
+```
+
+Result:
+
+```
+                        pass rate: baseline -> candidate
+┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓
+┃ scorer             ┃ overall     ┃ ambiguous   ┃ clear-incident ┃ degenerate  ┃ non-incident ┃
+┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━╇━━━━━━━━━━━━━━┩
+│ budget             │ 100%        │ 100%        │ 100%           │ 100%        │ 100%         │
+│ effect_consistency │ 100% -> 98% │ 100% -> 92% │ 100%           │ 100%        │ 100%         │
+│ outcome_match      │ 95%         │ 100%        │ 100%           │ 75%         │ 100%         │
+│ rationale_judge    │ 100%        │ 100%        │ 100%           │ 100%        │ 100%         │
+│ route_match        │ 100% -> 72% │ 100% -> 17% │ 100%           │ 100% -> 88% │ 100%         │
+└────────────────────┴─────────────┴─────────────┴────────────────┴─────────────┴──────────────┘
+
+blocked - 7 finding(s):
+  x must-pass case failed: amb-001:route_match
+  x must-pass case failed: amb-002:route_match
+  x must-pass case failed: amb-003:route_match
+  x must-pass case failed: amb-004:route_match
+  x must-pass case failed: amb-011:effect_consistency
+  x must-pass case failed: amb-011:route_match
+  x scorer route_match dropped 27.50% (100.00% -> 72.50%)
+```
+
+`outcome_match` did not move.
+
+That is the scary part. If I only checked final output, this change would
+ship.
+
+But `route_match` caught it. Ten of the twelve ambiguous cases now skip
+review.
+
+The worst one is `amb-011`. It is a single unverifiable crash report. The
+reviewer should reject it. In the baseline, rejection means no CRM case. In
+the candidate, the run never parks, so no one rejects it and the CRM case
+gets created.
+
+That shows up as a must-pass `effect_consistency` failure.
+
+Much better place to find it than three weeks later in the CRM.
+
+## Demo 2: a regression only the judge catches
+
+Demo 1 never needed the judge - the deterministic scorers caught everything.
+This one is the opposite.
+
+`EVALS_RATIONALE_STYLE=terse` makes the decide stub emit rationales like
+"escalate." - same action, same confidence, no reasoning. It is the stand-in
+for a prompt change that makes the model terse.
+
+```bash
+EVALS_RATIONALE_STYLE=terse uv run inspect eval src/evals/task.py \
+  --model mockllm/model
+uv run evals compare logs/<baseline>.eval logs/<terse>.eval
+```
+
+```
+                              pass rate: baseline -> candidate
+┏━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━┓
+┃ scorer             ┃ overall    ┃ ambiguous  ┃ clear-incident ┃ degenerate ┃ non-incident ┃
+┡━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━┩
+│ budget             │ 100%       │ 100%       │ 100%           │ 100%       │ 100%         │
+│ effect_consistency │ 100%       │ 100%       │ 100%           │ 100%       │ 100%         │
+│ outcome_match      │ 95%        │ 100%       │ 100%           │ 75%        │ 100%         │
+│ rationale_judge    │ 100% -> 0% │ 100% -> 0% │ 100% -> 0%     │ 100% -> 0% │ 100% -> 0%   │
+│ route_match        │ 100%       │ 100%       │ 100%           │ 100%       │ 100%         │
+└────────────────────┴────────────┴────────────┴────────────────┴────────────┴──────────────┘
+
+blocked - 14 finding(s):
+  x must-pass case failed: amb-001:rationale_judge
+  x must-pass case failed: amb-002:rationale_judge
+  ...
+  x scorer rationale_judge dropped 100.00% (100.00% -> 0.00%)
+```
+
+Every deterministic scorer is identical. Route, outcome, effects, budget -
+all unchanged, because the decisions are unchanged. Only the rationale
+rotted, and only the judge noticed.
+
+Whether that should block a release is a policy question. If the rationale
+goes into the CRM ticket that a human acts on, it should.
+
+## When a case goes red
+
+The eval log has scores and explanations. Sometimes I want the actual run.
+
+`evals debug` re-runs one case on the durable SQLite backend instead of the
+in-memory one, with the runtime narration switched on. `deg-005` is one of
+the known failures in the baseline:
+
+```bash
+uv run evals debug deg-005
+```
+
+```
+15:12:24.615  run       run_id=run-4975b7d252  workflow=case-triage@v3
+15:12:24.621  intent    node=classify  attempt=1
+15:12:24.621  outcome   node=classify  attempt=1
+...
+15:12:24.624  outcome   node=decide  attempt=1
+15:12:24.625  outcome   node=handoff  attempt=1
+15:12:24.625  run       run_id=run-4975b7d252  status=completed
+
+run-4975b7d252  case-triage@v3  scenario=eval-DEG-005  langgraph/prod  completed
+└── classify (det)
+    ├── attempt 1: ok
+    ├── enrich (llm)
+    │   ├── attempt 1: ok
+    │   └── decide (llm)
+    │       ├── attempt 1: ok
+    │       ├── review (human) not reached
+    │       └── handoff (effect)
+    │           └── attempt 1: ok
+    └── fetch_refs (det)
+        └── attempt 1: ok
+
+  ok route: expected direct, got direct
+  x  action: expected resolve, got escalate
+  ok handoff: expected 1 outbox row, got 1 outbox row(s)
+
+run run-4975b7d252 kept in .demo/state.db (confidence=0.92)
+```
+
+The case text says "nothing is down anymore". The keyword classifier sees
+"down", calls it an incident, and `decide` escalates a message that says
+everything is fine. The trace shows the run was healthy - every node ok,
+review correctly skipped at 0.92 confidence. The bug is in `classify`, and
+the recorded `classify` outcome in `.demo/state.db` is where you see it.
+
+The run stays in the state store afterwards, so the parent repo's tooling
+works on it. Debugging an eval failure is just debugging a run.
+
+## Trying it
+
+```bash
+git clone https://github.com/sachinkahawala/workflow-evals-demo
+cd workflow-evals-demo
+uv sync
+
+uv run inspect eval src/evals/task.py --model mockllm/model
+uv run evals calibrate-judge
+uv run evals debug deg-005
+uv run inspect view
+```
+
+No account. No API key.
+
+Real mode is the same configuration as the parent repo -
+`AZURE_OPENAI_ENDPOINT`, `AZURE_OPENAI_API_KEY`, and the
+`MODEL_DEPLOYMENT_*` mappings from its `.env.example` - plus `--epochs 3`
+once nondeterminism is in play.
+
+The parent repo is pinned in `pyproject.toml`. If the pin moves, the
+baseline should move in the same commit. Otherwise the numbers stop meaning
+anything.
+
+Not covered here:
+
+- production traffic
+- proper statistics
+- judge calibration beyond the 15-label starter set
+
+This is still a small curated eval. But it catches the failure I wanted it
+to catch: workflow changes that leave every node looking fine while the
+actual run is wrong.
