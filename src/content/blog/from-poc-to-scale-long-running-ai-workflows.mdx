@@ -5,9 +5,7 @@ pubDate: 2026-06-07
 tags: [ai-systems, workflows, production, multi-agent]
 ---
 
-In one of the most recent client projects I worked on, the problem was not really a chatbot problem. It was not a single agent either.
-
-It was a process. A sequence of decisions and actions a team of humans used to do over hours or days, with branches, reviews, and pauses.
+In one of the most recent client projects I worked on, the thing we were building was a process - a sequence of decisions and actions a team of humans used to do over hours or days, with branches, reviews, and pauses. Nothing about it looked like a chatbot, and a single agent was never going to cover it.
 
 The interesting questions stopped being about prompts and tools a while back. They are about how you run something that takes a long time, fails halfway through, and has to be safe to retry.
 
@@ -30,7 +28,7 @@ Four node kinds have covered everything I needed so far:
 - `human` - parks the run and waits for a review
 - `effect` - does something the outside world can see
 
-The graph is data, not code. The same workflow as a definition file:
+The graph is data. The same workflow as a definition file:
 
 ```yaml
 id: case-triage
@@ -234,7 +232,7 @@ One process holds the graph in memory. It walks the nodes in order, calls the mo
 
 You demo it and it works. Mostly because of the constraints you quietly chose: small graph, short horizon, your own inputs, a model that behaves.
 
-The mistake I keep making is reading POC success as evidence the architecture is sound. It usually is not. It is evidence the problem was small. Each constraint becomes a hole the moment the workflow is real.
+The mistake I keep making is reading POC success as evidence the architecture is sound, when mostly it is evidence the problem was small. Each constraint becomes a hole the moment the workflow is real.
 
 ## Where the POC breaks
 
@@ -259,7 +257,7 @@ The pattern I keep seeing across these rows is the same. The POC stored state in
 
 ## What production looks like
 
-The fix was not bigger boxes. It was separating the two things the POC fused: the workflow definition and the workflow runtime.
+The fix was separating the two things the POC fused: the workflow definition and the workflow runtime.
 
 <figure>
   <svg viewBox="0 0 1024 656" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
@@ -467,7 +465,7 @@ The rest of the architecture supports this loop.
 
 A model gateway owns rate limits, budgets, and prompt caching. All `llm` nodes call through it. When the provider degrades, one place knows.
 
-Human review is a node type, not a side effect. A `review` node records the requirement, parks the run, and an event wakes it later. Nothing blocks while a human thinks.
+Human review is its own node type. A `review` node records the requirement, parks the run, and an event wakes it later. Nothing blocks while a human thinks.
 
 Every run produces a trace shaped like the graph. The definition is effectively the schema for the trace. Replays are first-class: pick a run, pick a node, replay from there with the recorded inputs.
 
@@ -475,7 +473,7 @@ None of these moves are novel. Temporal, Step Functions, Airflow - durable execu
 
 ## What this buys you
 
-Runs stop depending on any single process. Deploys do not drop runs. Crashes do not drop runs. A run can fan out into thousands of parallel sub-runs, each persisted, each retryable. Replay is an operation, not an incident.
+Runs stop depending on any single process. Deploys do not drop runs. Crashes do not drop runs. A run can fan out into thousands of parallel sub-runs, each persisted, each retryable. Replay becomes a routine operation.
 
 The quieter change is what it does to the way you build. Once the graph is the artefact, the model call stops being the centre of gravity. You spend more time on the shape of the work and less on the prompt. That turns out to be where most of the leverage was anyway.
 

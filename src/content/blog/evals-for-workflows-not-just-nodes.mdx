@@ -38,7 +38,7 @@ job:
 If you have not read the earlier posts: the outbox stands in for the
 external system. It is the world's copy of what the workflow did.
 
-The thing being evaluated is not any single node. It is the run.
+The unit under evaluation is the whole run.
 
 ## Where per-node evals fall short
 
@@ -49,8 +49,8 @@ The `decide → review` edge fires when confidence is below `0.8`.
 
 That `0.8` decides which cases a human sees.
 
-But it is not inside any node. So I can test `decide` forever and still not
-test the policy that routes the run.
+But it lives on an edge, outside every node. So I can test `decide` forever
+and still never touch the policy that routes the run.
 
 Same with effects. A run can say `completed`, but that does not mean the
 CRM/outbox is correct. Maybe there is one case. Maybe there are two. Maybe a
@@ -63,7 +63,7 @@ can send the wrong frame into `enrich`. `enrich` then produces a locally
 valid output for the wrong input. Every node looks green, but the actual run
 is wrong.
 
-So this eval scores the run, not the boxes.
+So this eval scores whole runs.
 
 <figure class="figure-wide">
   <svg viewBox="0 0 1024 400" role="img" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: 'auto' }}>
@@ -151,9 +151,8 @@ The runtime already records most of what I needed:
 - review rows
 - outbox rows
 
-That was originally for crash recovery and replay, not evals.
-
-But it works nicely for evals too.
+All of it originally existed for crash recovery and replay, and it turns
+out to work nicely for evals too.
 
 The harness runs a case, reads the state store back, and turns it into one
 flat record: route, decision, effects, attempts.
@@ -330,8 +329,13 @@ into small pass-rate changes. The gate is blunt on purpose.
 One scorer is model-graded, and it needs more care than the other four
 combined.
 
-The rule I follow: if a deterministic check can answer the question, it is
-not a judge question. Routing is deterministic. Effects are countable. The
+LLM-as-judge is a whole topic on its own - rubric design, calibration at
+scale, judge drift, when pairwise beats pointwise. I will keep it brief here
+and write a separate post on it. This section covers only what this repo
+needed.
+
+The rule I follow: if a deterministic check can answer the question, the
+judge never sees it. Routing is deterministic. Effects are countable. The
 only thing left in this workflow is whether the free-text rationale actually
 supports the decision, and there is no field comparison for that.
 
@@ -382,7 +386,7 @@ Against a real model, the same command is the calibration loop: run it, read
 the disagreements, fix the rubric before touching any threshold. Re-run it
 whenever the judge model or the rubric changes.
 
-15 labels is a start, not a result. But the set exists and the loop is one
+15 labels is only a starting point, but the set exists and the loop is one
 command.
 
 ## Harness
@@ -405,7 +409,8 @@ The parent repo's stub gateway returns schema-valid output, but it is
 input-independent. Every float comes back as `0.9`. So every case sailed
 past the `0.8` review gate and the dataset tested almost nothing.
 
-I did not patch the parent repo. I subclassed the gateway in the eval repo.
+Rather than patch the parent repo, I subclassed the gateway in the eval
+repo.
 
 The eval stub reads the case text and lowers confidence for hedged phrases
 like:
@@ -435,12 +440,12 @@ inputs give the same numbers on any machine.
 Real mode is not like that. The same case can route differently on two runs
 when the confidence lands near the threshold. Inspect handles repetition
 natively - `--epochs 3` runs every case three times. For must_pass cases the
-right rule is pass-every-epoch, not pass-on-average; the repo's summary
-currently assumes one epoch, so that rule is on the list, not in the code.
+right rule is passing every epoch. The repo's summary currently assumes one
+epoch, so that rule is still a to-do.
 
-Stub mode does not say anything about model quality. It does catch routing,
-review behaviour, and effect consistency, because those live in the
-workflow/runtime, not the model.
+Stub mode says nothing about model quality. It does catch routing, review
+behaviour, and effect consistency, because those come from the workflow and
+the runtime rather than the model.
 
 Real mode uses the same env vars as the parent repo. That is where judge
 calibration and the injection-shaped cases start to matter.

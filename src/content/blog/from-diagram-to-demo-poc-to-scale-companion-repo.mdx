@@ -25,8 +25,8 @@ arranged so you can watch the runtime misbehave and recover from a CLI.
 It's built around claims you can check by running it:
 
 - The workflow definition can stay stable while the runtime changes beneath it.
-- Retry, replay, human review, crash recovery, and compensation should be
-  observable from a CLI, not only described in prose.
+- Retry, replay, human review, crash recovery, and compensation should all
+  be observable from a CLI.
 - The production runtime should fail differently from the POC runtime on the
   same input.
 - Framework choice should not own the entire durability story; the common
@@ -118,8 +118,8 @@ That file is byte-identical across every combination the repo supports:
 - Production runtime, on LangGraph
 - Production runtime, on Microsoft Agent Framework
 
-Four implementations share one definition - production hardens the runtime,
-not the shape of the workflow.
+Four implementations share one definition; all the hardening happens in the
+runtime around it.
 
 ## Six executable scenarios
 
@@ -345,8 +345,8 @@ under both with `--framework langgraph|msaf`.
 
 The detailed framework comparison lives in
 [`docs/LANGGRAPH_VS_MSAF.md`](https://github.com/sachinkahawala/poc-to-scale-demo/blob/main/docs/LANGGRAPH_VS_MSAF.md).
-What stood out building both is that most production durability does not
-live in either graph framework. It lives in `src/common/`:
+What stood out building both is how much of the production durability sits
+outside the graph frameworks, in `src/common/`:
 
 - the intent/outcome ledger
 - the effect-recovery arm (query the world by request id after a crash)
@@ -556,7 +556,8 @@ change the contracts being demonstrated:
   it; a UI is its own product.
 - **APIM in front of Azure OpenAI.** The natural next step for
   multi-tenant rate isolation, but it roughly doubles the infra for one
-  demo. Discussed in the framework comparison doc, not deployed.
+  demo. It is discussed in the framework comparison doc and left out of the
+  deployment.
 - **Multi-region / HA Postgres.** A single Flexible Server with backups is
   enough to demonstrate durability.
 - **An actual CRM.** The `handoff` effect writes to a local outbox table
