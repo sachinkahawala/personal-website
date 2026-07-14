@@ -21,9 +21,8 @@ const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
   <div class="mx-auto max-w-content px-4 py-8 md:px-8 md:py-12">
     <header class="mb-12">
       <p class="mb-2 font-mono text-xs uppercase tracking-[0.08em] text-accent">papers</p>
-      <h1 class="mb-2 text-3xl font-semibold leading-tight text-fg">Publications</h1>
-      <p class="text-md text-muted">Selected publications. {papers.length} entries.</p>
-      <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs text-muted">
+      <h1 class="mb-3 text-3xl font-semibold leading-tight text-fg">Publications</h1>
+      <div class="flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs text-muted">
         <span class="rounded-sm border border-border bg-code px-2 py-0.5">{site.scholarStats.citations} citations</span>
         <span class="rounded-sm border border-border bg-code px-2 py-0.5">h-index {site.scholarStats.hIndex}</span>
         <span class="rounded-sm border border-border bg-code px-2 py-0.5">i10-index {site.scholarStats.i10Index}</span>
@@ -31,6 +30,7 @@ const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
           <Icon name="lucide:graduation-cap" class="size-3.5" /> Google Scholar
         </a>
       </div>
+      <p class="mt-3 text-sm text-muted">A selected set of publications, the full list is on <a class="text-accent transition-colors duration-150 ease-out hover:text-accent" href={site.socials.scholar} target="_blank" rel="noopener">Google Scholar</a>.</p>
     </header>
 
     {years.map((y) => (
