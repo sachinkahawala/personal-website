@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
 import PaperCard from '../components/PaperCard.astro';
+import { Icon } from 'astro-icon/components';
 import { getCollection } from 'astro:content';
 import { site } from '../lib/site';
 
@@ -22,6 +23,14 @@ const years = Object.keys(grouped).sort((a, b) => Number(b) - Number(a));
       <p class="mb-2 font-mono text-xs uppercase tracking-[0.08em] text-accent">papers</p>
       <h1 class="mb-2 text-3xl font-semibold leading-tight text-fg">Publications</h1>
       <p class="text-md text-muted">Selected publications. {papers.length} entries.</p>
+      <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 font-mono text-xs text-muted">
+        <span class="rounded-sm border border-border bg-code px-2 py-0.5">{site.scholarStats.citations} citations</span>
+        <span class="rounded-sm border border-border bg-code px-2 py-0.5">h-index {site.scholarStats.hIndex}</span>
+        <span class="rounded-sm border border-border bg-code px-2 py-0.5">i10-index {site.scholarStats.i10Index}</span>
+        <a class="inline-flex items-center gap-1 text-muted transition-colors duration-150 ease-out hover:text-accent" href={site.socials.scholar} target="_blank" rel="noopener">
+          <Icon name="lucide:graduation-cap" class="size-3.5" /> Google Scholar
+        </a>
+      </div>
     </header>
 
     {years.map((y) => (

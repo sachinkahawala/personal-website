@@ -13,6 +13,13 @@ export const site = {
     linkedin: 'https://www.linkedin.com/in/sachinkahawala/',
     scholar: 'https://scholar.google.com/citations?user=h80_3PcAAAAJ&hl=en',
   },
+  // Update by hand from Google Scholar when refreshing the site.
+  scholarStats: {
+    citations: 224,
+    hIndex: 7,
+    i10Index: 7,
+    asOf: 'July 2026',
+  },
   nav: [
     { href: '/about', label: 'About' },
     { href: '/blog', label: 'Writing' },
