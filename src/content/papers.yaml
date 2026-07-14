@@ -1,34 +1,42 @@
 - id: graph-vfa-2025
   title: Graph Vector Function Architecture
-  authors: ["Sachin Kahawala", "et al."]
+  authors: ["Sachin Kahawala", "Daswin De Silva", "Evgeny Osipov", "Dmitri Rachkovskij", "Ross W. Gayler"]
   venue: Neural Networks
   year: 2025
-  links: {}
+  links:
+    doi: https://doi.org/10.1016/j.neunet.2025.108416
 
 - id: hypervector-smart-cities-2024
-  title: Hypervector Approximation of Complex Manifolds in Smart City Internet of Things Infrastructure
-  authors: ["Sachin Kahawala", "et al."]
-  venue: Smart Cities 7(6), 131
+  title: Hypervector Approximation of Complex Manifolds for Artificial Intelligence Digital Twins in Smart Cities
+  authors: ["Sachin Kahawala", "Nuwan Madhusanka", "Daswin De Silva", "Evgeny Osipov", "Nishan Mills", "Milos Manic", "Andrew Jennings"]
+  venue: Smart Cities
   year: 2024
-  links: {}
+  links:
+    pdf: https://www.mdpi.com/2624-6511/7/6/131/pdf
+    doi: https://doi.org/10.3390/smartcities7060131
 
 - id: hyperseed-tnnls-2022
   title: "Hyperseed: Unsupervised Learning With Vector Symbolic Architectures"
-  authors: ["Evgeny Osipov", "Sachin Kahawala", "et al."]
+  authors: ["Evgeny Osipov", "Sachin Kahawala", "Dilantha Haputhanthri", "Thimal Kempitiya", "Daswin De Silva", "Damminda Alahakoon", "Denis Kleyko"]
   venue: IEEE Transactions on Neural Networks and Learning Systems
   year: 2022
-  links: {}
+  links:
+    pdf: https://arxiv.org/pdf/2110.08343
+    doi: https://doi.org/10.1109/TNNLS.2022.3211274
 
 - id: electricity-markets-2021
   title: Robust Multi-Step Predictor for Electricity Markets with Real-Time Pricing
-  authors: ["Sachin Kahawala", "et al."]
-  venue: Energies 14(14)
+  authors: ["Sachin Kahawala", "Daswin De Silva", "Seppo Sierla", "Damminda Alahakoon", "Rashmika Nawaratne", "Evgeny Osipov", "Andrew Jennings", "Valeriy Vyatkin"]
+  venue: Energies
   year: 2021
-  links: {}
+  links:
+    pdf: https://www.mdpi.com/1996-1073/14/14/4378/pdf
+    doi: https://doi.org/10.3390/en14144378
 
 - id: road-surveillance-tii-2021
   title: A Generative Latent Space Approach for Real-Time Road Surveillance in Smart Cities
-  authors: ["Rashmika Nawaratne", "Sachin Kahawala", "et al."]
-  venue: IEEE Transactions on Industrial Informatics 17(7), 4872-4881
+  authors: ["Rashmika Nawaratne", "Sachin Kahawala", "Su Nguyen", "Daswin De Silva"]
+  venue: IEEE Transactions on Industrial Informatics
   year: 2021
-  links: {}
+  links:
+    doi: https://doi.org/10.1109/TII.2020.3037286
