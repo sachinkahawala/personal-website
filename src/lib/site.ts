@@ -24,6 +24,6 @@ export const site = {
     { href: '/about', label: 'About' },
     { href: '/blog', label: 'Writing' },
     { href: '/projects', label: 'Projects' },
-    { href: '/papers', label: 'Papers' },
+    { href: '/research', label: 'Research' },
   ],
 };

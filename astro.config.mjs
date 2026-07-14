@@ -8,6 +8,9 @@ import tailwindcss from '@tailwindcss/vite';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://coldforge.me',
+  redirects: {
+    '/papers': '/research',
+  },
   integrations: [
     mdx(),
     sitemap(),

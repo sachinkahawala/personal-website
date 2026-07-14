@@ -33,15 +33,18 @@ const papers = defineCollection({
   loader: file('./src/content/papers.yaml'),
   schema: z.object({
     id: z.string(),
+    type: z.enum(['paper', 'thesis']).default('paper'),
     title: z.string(),
     authors: z.array(z.string()),
     venue: z.string(),
     year: z.number(),
+    abstract: z.string().optional(),
     links: z
       .object({
         pdf: z.string().url().optional(),
         doi: z.string().url().optional(),
         scholar: z.string().url().optional(),
+        repository: z.string().url().optional(),
       })
       .default({}),
   }),

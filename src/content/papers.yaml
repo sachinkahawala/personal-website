@@ -1,3 +1,48 @@
+- id: phd-thesis-2025
+  type: thesis
+  title: Energy Efficient Artificial Intelligence using Vector Symbolic Architectures
+  authors: ["Sachin Kahawala"]
+  venue: La Trobe University
+  year: 2025
+  abstract: >-
+    Artificial Intelligence (AI) is transforming the way we live and work. Large AI models in
+    the order of billions of parameters are foundational to this paradigm shift from predictive
+    and goal-oriented AI towards generative and emergent capabilities. However, these large AI
+    models are computationally intensive as they consume large volumes of energy for training,
+    evaluation, inference and usage. This large energy footprint further limits the versatility of
+    applications of AI, specifically in low-energy and low-resource settings. Vector Symbolic
+    Architectures (VSA) have been recognised as an alternative computing architecture that
+    can facilitate the development of energy-efficient AI algorithms and models. This thesis
+    investigates VSA capabilities for the design and development of novel, energy-efficient
+    algorithms for unsupervised learning and graph representation learning. The thesis
+    contributes three new algorithms and their application to energy-efficient AI within
+    real-world IoT infrastructure. The first contribution is the Hyperseed algorithm; an
+    energy-efficient, few-shot, unsupervised learner with a learning rule based on single vector
+    operation. It is expressed within the Fourier Holographic Reduced Representations (FHRR)
+    model that is specifically suited for implementation on spiking neuromorphic hardware. The
+    second contribution is the Hyperbase algorithm. Hyperbase addresses several limitations of
+    Hyperseed by learning quasi-orthonormal bases in high-dimensional spaces for handling
+    nonlinear complex manifolds. It is an energy-efficient, unsupervised learner of Fractional
+    Power Encoding (FPE) base hypervectors. The third algorithmic contribution is in graph
+    representational learning, the Graph Vector Function Architecture (GVFA) algorithm. GVFA
+    is a zero-shot learner for graph and node representations where the representations are task
+    generic. Compared to state-of-the-art Graph Neural Networks (GNNs), the computational cost
+    of GVFA is significantly lower while maintaining equivalent performance in graph based tasks
+    such as node and graph classification, isomorphism detection, and latent structure discovery.
+    Extensive experiments conducted on synthetic and real-world graph datasets demonstrate GVFA
+    capabilities in enhanced speed and accuracy for processing complex graph data. The fourth
+    and final contribution presents the real-world validation of the energy-efficient AI
+    capabilities of Hyperseed, Hyperbase, and GVFA algorithms within a multi-campus tertiary
+    education institution, demonstrating their effectiveness in operational IoT infrastructure
+    where clusters of hypervectors approximate complex data manifolds into fine-grained local
+    variations that can be tracked for anomalies and temporal shifts. Through the theoretical
+    development of three novel algorithms, Hyperseed, Hyperbase, GVFA, and the transition of
+    these algorithms into practical applications in real-world settings, this thesis contributes
+    to the advancement of energy-efficient AI research for a sustainable future.
+  links:
+    pdf: https://opal.latrobe.edu.au/articles/thesis/Energy_Efficient_Artificial_Intelligence_using_Vector_Symbolic_Architectures/29938691?file=57275540
+    repository: https://opal.latrobe.edu.au/articles/thesis/Energy_Efficient_Artificial_Intelligence_using_Vector_Symbolic_Architectures/29938691
+
 - id: graph-vfa-2025
   title: Graph Vector Function Architecture
   authors: ["Sachin Kahawala", "Daswin De Silva", "Evgeny Osipov", "Dmitri Rachkovskij", "Ross W. Gayler"]
