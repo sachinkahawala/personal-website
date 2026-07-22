@@ -1,0 +1,193 @@
+---
+title: 'AI-103 and AI-300: a guide and my take'
+description: 'I passed both new Azure AI certifications on the first attempt, two weeks apart. What they cover, how I actually prepared, and what surprised me.'
+pubDate: 2026-07-22
+tags: [azure, ai, certification, learning]
+draft: false
+---
+
+import Callout from '../../components/Callout.astro';
+
+I sat two new Microsoft certifications back to back this month:
+[**AI-103**](https://learn.microsoft.com/en-us/users/sachinkahawala-3465/credentials/certification/azure-ai-apps-and-agents-developer-associate)
+and
+[**AI-300**](https://learn.microsoft.com/en-au/users/sachinkahawala-3465/credentials/certification/operationalizing-machine-learning-and-generative-ai-solutions?tab=credentials-tab).
+Passed both on the first attempt, about two weeks of
+prep behind each. This is half guide - what the exams actually cover, how I
+prepared - and half a straight account of what I think about them, which
+parts of my own preparation I'd change, and where I'm genuinely unsure I did
+well.
+
+## What these two certs actually are
+
+The naming trips people up, so let's clear it up first.
+
+**AI-103**, *Developing AI Apps and Agents on Azure*, is the exam behind the
+**Azure AI Apps and Agents Developer Associate** certification. It's the
+builder's exam: planning an Azure AI solution, then implementing generative
+AI and agentic solutions, computer vision, text analysis, and information
+extraction on top of it.
+
+**AI-300**, *Operationalizing Machine Learning and Generative AI
+Solutions*, is the exam behind the **Machine Learning Operations Engineer
+Associate** certification. It's the operator's exam: the full machine
+learning model lifecycle, designing and implementing GenAIOps
+infrastructure, and generative AI quality assurance and observability once
+something is already built. Honestly, the certification name is a bit
+misleading - "Machine Learning Operations" reads like it's about classic
+MLOps alone, but in practice the exam splits its weight evenly across both
+worlds: traditional ML model lifecycle and pipelines on one side, and
+GenAIOps - prompts, agents, generative AI quality and observability - on
+the other. It's not a GenAIOps exam with a legacy MLOps section bolted on;
+both halves carry real weight.
+
+Put simply - AI-103 asks "can you build it," AI-300 asks "can you run it
+once it's live." Different exams, but they sit on the same underlying
+platform (Microsoft Foundry), which is exactly why I ended up sitting them
+together.
+
+## Skills measured
+
+**AI-103 - Developing AI Apps and Agents on Azure**
+
+| Domain | Weight |
+| --- | ---: |
+| Implement generative AI and agentic solutions | 30-35% |
+| Plan and manage an Azure AI solution | 25-30% |
+| Implement computer vision solutions | 10-15% |
+| Implement text analysis solutions | 10-15% |
+| Implement information extraction solutions | 10-15% |
+
+**AI-300 - Operationalizing Machine Learning and Generative AI Solutions**
+
+| Domain | Weight |
+| --- | ---: |
+| Implement machine learning model lifecycle and operations | 25-30% |
+| Design and implement a GenAIOps infrastructure | 20-25% |
+| Design and implement an MLOps infrastructure | 15-20% |
+| Implement generative AI quality assurance and observability | 10-15% |
+| Optimize generative AI systems and model performance | 10-15% |
+
+(Full domain lists and sub-skills, straight from Microsoft's official
+study guides:
+[AI-103](https://learn.microsoft.com/en-au/credentials/certifications/resources/study-guides/ai-103),
+[AI-300](https://learn.microsoft.com/en-au/credentials/certifications/resources/study-guides/ai-300).
+Microsoft does revise these periodically, so check the current version
+before you plan your prep around these numbers.)
+
+## What the exam actually feels like
+
+I sat both exams online through Pearson OnVUE, proctored the normal way -
+nothing unusual there, but worth naming for anyone who hasn't sat a
+Microsoft exam remotely before.
+
+The skill bullets above are the syllabus, but they undersell how the
+questions are actually framed. Read through either study guide and almost
+every bullet is scenario language - "implement a solution that...",
+"choose the appropriate...", "build a solution that analyzes..." - not
+"define X" or "name the parameter for Y." That carries straight through
+into the exam. In my sitting, the large majority of questions were
+scenario-based: a short business or technical situation, then a decision
+to make, rather than a bare recall question.
+
+Both exams also included a case study - a longer scenario with a block of
+questions attached to it rather than one-off items - and each case study
+I got had 6 questions tied to it. Total question count: 63 for AI-103, 60
+for AI-300. Microsoft doesn't publish exact question counts or case-study
+structure anywhere in the study guides (both can vary between sittings and
+exam versions), so take these as a real data point from my own exam rather
+than a guaranteed number.
+
+## How I actually prepared
+
+Base layer was the two official Microsoft Learn video series - one
+[for AI-103](https://www.youtube.com/playlist?list=PLWGIg_TYLeEQ), one
+[for AI-300](https://www.youtube.com/playlist?list=PLDU7NmoNBJ0Y) - plus
+the matching Microsoft Learn training paths and modules for each. The
+standard route. Nothing unusual there.
+
+The part I'd actually recommend to someone else came after that. Once I'd
+covered the material, instead of reaching for one of the many generic
+exam-dump or practice-test sites out there, I built my own question banks -
+small HTML artifacts, generated with Claude - targeted specifically at the
+areas I knew I was weakest on. I never touched the generic practice sites.
+The tailored version let me keep narrowing in on exactly what I was
+shakiest on, instead of grinding through questions on things I'd already
+got solid.
+
+## My take
+
+### The syntax-question problem
+
+Both exams leaned harder on literal SDK/syntax recall than I expected -
+"what does this specific call look like," not just "what's the right
+approach." I'm genuinely not sure I did well on that slice of either exam.
+
+I think this is worth naming honestly, because it's not really a
+"study harder" problem - it's a GenAI-era one. Day to day, I don't hand-write
+every code block anymore. I architect around what's available and let the
+model fill in the exact syntax. That's the right way to work now, but it
+means the specific muscle these exams test - precise recall of SDK calls
+without assistance - is exactly the muscle that gets less exercise. Worth
+knowing going in, so you can deliberately drill it rather than assume your
+day-to-day fluency will carry over.
+
+### Sit them together
+
+If you're doing both, I'd recommend sitting AI-103 and AI-300 close
+together rather than spacing them out. There's real overlap - same
+platform, overlapping concepts around agents and generative AI - and
+studying one reinforces the other while it's still fresh. That said,
+neither one is a walk in the park on its own; "do them together" is about
+efficiency, not about either exam being easy.
+
+### Prompt versioning: fine for one agent, not for a fleet
+
+One thing from the AI-300 material I want to push back on a little: the
+GenAIOps guidance leans on **file-based prompt versioning** - prompts
+committed alongside code, versioned through GitHub. That's fine for a
+single, light agent. It gets tricky fast once you're running multi-agent
+orchestration - many prompts, many agents, and you want to iterate on one
+without redeploying the rest.
+
+What I'd actually reach for instead is a managed, lightweight prompt
+library: prompts maintained as their own artifact, fetched at runtime
+rather than baked into a deploy. That also makes prompts something
+non-technical people can review and edit directly, and it ties much more
+naturally into custom evaluation interfaces - you can swap a prompt version
+and re-run evals against it without touching code at all. File-based
+versioning is the path of least resistance, not necessarily the right one
+once the system gets past a single agent.
+
+That said, a managed prompt library isn't free. It's another service to
+run, another place a deploy can drift from what's actually live, and now
+prompt changes can ship outside your normal review and rollback path
+entirely - which is exactly the safety net file-based versioning gives
+you for free. So this isn't a strict upgrade, it's a trade-off, and which
+side wins depends on the project: a handful of agents with infrequent
+prompt changes, stick with files; a fleet of agents with prompts
+iterated on constantly by people outside the codebase, that's when the
+extra infrastructure starts paying for itself.
+
+<Callout kind="tip" title="The pricing discount, explained">
+Both exams list at **$140 USD** from Australia. I paid **$77**. Line item:
+`ESI 50% Discount DAC` - Microsoft's Enterprise Skills Initiative, an
+employer/organization enrollment tied to my Learn profile that applies
+automatically at checkout. Not a launch promo, not a beta code. Check your
+own account before assuming you're paying full price.
+</Callout>
+
+<Callout kind="note" title="More tips, unverified">
+I looked for outside prep tips (Reddit and similar) to add here, but both
+exam codes are new enough in 2026 that there isn't much real community
+discussion yet - most of what turns up is dump-site SEO content, which
+isn't worth citing. The one thing that held up: expect scenario-based
+questions over rote recall, and hands-on time in Foundry matters more than
+reading alone. Slot for anything sharper I find later, or that readers want
+to add.
+</Callout>
+
+## What's next
+
+Next up on the build side: putting the managed-prompt-library idea into
+practice on my own multi-agent work.
