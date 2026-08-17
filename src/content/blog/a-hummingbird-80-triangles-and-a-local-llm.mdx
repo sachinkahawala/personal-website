@@ -1,0 +1,241 @@
+---
+title: 'A hummingbird, 80 triangles, and a local LLM'
+description: 'FunSearch-style code evolution, fully on a MacBook: a 27B model rewrites one Python function for 40 generations, cuts image error by 42%, and beats a validated reference heuristic.'
+pubDate: 2026-08-17
+tags: [ai-research, local-llms, evolutionary-search, funsearch]
+---
+
+import { Image } from 'astro:assets';
+import triptych from './_images/triangle-art-triptych.png';
+import fitness from './_images/triangle-art-fitness.png';
+import progression from './_images/triangle-art-progression.png';
+import filmstrip from './_images/triangle-art-filmstrip.png';
+import evolutionGif from './_images/triangle-art-evolution.gif';
+import budget1000 from './_images/triangle-art-budget-1000.png';
+import hero1000Gif from './_images/triangle-art-hero-1000.gif';
+
+When Andrej Karpathy published
+[autoresearch](https://github.com/karpathy/autoresearch), the idea stuck with
+me: point an AI agent at a training script, give it a fixed experiment budget
+and a metric it cannot fake, and let it iterate overnight while you sleep. His
+README jokes that frontier research "used to be done by meat computers". The
+joke lands because the loop actually works.
+
+What I kept wondering was how far the same loop goes when nothing leaves the
+laptop. The agent here is
+[Qwen3.8-27B](https://huggingface.co/Qwen/Qwen3.8-27B), a 27B open-weight
+model that benchmarks at the level of Claude Opus 4.6, the frontier model
+Anthropic shipped in February 2026. When I first worked with Opus 4.6, I would
+never have believed that a couple of months later something at that level
+would be running on our laptops. It is, and it changes what "local" means: the
+whole research loop, agent included, runs on-device. No cloud inference
+anywhere.
+
+The result is [triangle-art](https://github.com/sachinkahawala/triangle-art).
+Qwen3.8-27B (via Ollama, quantised) evolves one Python function for 40
+generations. The function's job: approximate a target image using at most 80
+translucent grey triangles.
+
+<figure>
+  <Image src={triptych} alt="Three panels: a chaotic triangle mess from generation 0, a clearly recognisable triangle hummingbird from generation 39, and the target hummingbird silhouette" />
+  <figcaption>
+    Same frozen harness, same budgets, two versions of one evolved function.
+    Left: generation 0, random search, RMSE 0.162. Middle: generation 39,
+    RMSE 0.114. Right: the target.
+  </figcaption>
+</figure>
+
+## The game
+
+This is the FunSearch and AlphaEvolve recipe, shrunk to laptop size. The model
+never touches the scoring. It evolves exactly one function:
+
+```python
+def propose_triangle(target, canvas, t, n_total, evaluate, rng):
+    """Called once per triangle slot. Return the best candidate found,
+    or None to skip."""
+```
+
+Everything else is frozen. The canvas starts white. A painted triangle pushes
+its pixels 65% of the way toward one grey level. For each of the 80 slots, the
+heuristic may call `evaluate(pts, g)` at most 45 times; the call rasterises a
+candidate triangle and returns the exact change in squared error if it were
+painted now. Call 46 raises an exception and the run scores worst-case. Every
+generation of every heuristic gets an identical budget, so the fitness curve
+measures algorithmic quality, not compute.
+
+Fitness is RMSE against the target, averaged over three training images (the
+hummingbird, a mountain, a tree). Two held-out images are scored only when a
+new champion is accepted, and the model never sees them.
+
+Two details did the heavy lifting for honesty:
+
+1. **Scores come from pixels, not claims.** The heuristic returns a candidate
+   tuple including its claimed error delta. The harness ignores the claim,
+   re-rasterises the triangle from its vertices and grey level, recomputes the
+   true delta, and paints only if it is a real improvement.
+2. **Failures are data.** Crashes, budget busts, and malformed replies score
+   worst-case, and the error text is fed back into the next generation's
+   prompt. Roughly a third of all candidates failed. The loop survived all of
+   them.
+
+Generation 0 is a deliberately naive baseline: random vertices, random grey,
+keep the best of 45 tries. It scores a mean RMSE of 0.240 and its hummingbird
+is the mess on the left above. Before the run, I built a reference heuristic
+(error-guided placement, compact shapes, size annealing, optimal grey,
+a propose-then-refine budget split) to confirm the task had headroom. It
+scores 0.162. The model was never shown it.
+
+## What the model discovered
+
+<figure>
+  <Image src={fitness} alt="Fitness curve over 40 generations: best-so-far mean RMSE steps down from 0.240 to 0.139, grey dots mark every scored candidate, an orange line shows held-out images tracking the improvement" />
+  <figcaption>
+    Mean RMSE across the three training images (blue, lower is better), every
+    scored candidate (grey), and the two held-out images (orange).
+  </figcaption>
+</figure>
+
+The run took about 13 hours. Twelve generations produced an accepted
+improvement, and the rationale log reads like a compressed research diary.
+
+Generation 1 was the big one: the model replaced blind random search with
+sampling centred on the residual (where target and canvas disagree most), and
+switched to the harness's least-squares optimal grey. One generation, two of
+the reference's five ideas, and RMSE dropped from 0.240 to 0.177.
+
+Generations 2 to 5 added the rest, and some things I had not written down:
+arbitrary triangle shapes instead of equilateral ones ("a triangle that should
+be wide-and-flat is poorly matched"), then a proper local refinement stage
+using deterministic coordinate descent on each vertex, then smarter budget
+splits between exploring and refining. By generation 5 it was at 0.149,
+already ahead of the reference on the hummingbird.
+
+Then a ten-generation plateau. The loop's response is scripted: after three
+stagnant generations the prompt escalates to a bold-rewrite mode, one
+candidate per generation restarts from the naive baseline, and the model is
+shown a side-by-side image of its own best canvas against the target. Most of
+what came back was worse, which is what exploration looks like. The
+breakthrough at generation 23 was a genuine strategy change: stop grinding one
+triangle per slot to a local optimum, and instead spread candidates so the 80
+slots tile the image ("stop piling overlapping blobs on the same spot").
+
+The final champion, found at generation 39, scores candidates by how much
+residual their area can actually absorb, which stops it wasting triangles on
+regions that are already right. Final mean RMSE: 0.139. It places all 80 of
+its 80 triangles on every image; the baseline managed 60 to 76 before running
+out of improving moves.
+
+The part I find most satisfying: the model beat the reference heuristic by
+14%, using at least one idea I did not have.
+
+## Watching the hummingbird come into focus
+
+The metric is RMSE, but the metric a lay audience perceives is
+recognisability. They agree.
+
+<figure>
+  <img src={evolutionGif.src} class="mx-auto" alt="Animated GIF of the best hummingbird canvas at each accepted generation, sharpening from noise into a recognisable bird" />
+  <figcaption>
+    The best canvas at each accepted generation. Each frame is a better
+    algorithm, not more compute.
+  </figcaption>
+</figure>
+
+<figure>
+  <Image src={filmstrip} alt="Filmstrip of the best hummingbird canvas per accepted generation with RMSE captions" />
+  <figcaption>
+    The same journey as stills, with the champion's mean RMSE under each frame.
+  </figcaption>
+</figure>
+
+And within a single run of the final champion, you can watch its strategy:
+big tonal blocks first, detail later. Nobody told it to do that.
+
+<figure>
+  <Image src={progression} alt="The champion's canvas at 10, 20, 40, and 80 triangles, progressing from rough blocks to a detailed hummingbird" />
+  <figcaption>
+    The champion's canvas at 10, 20, 40, and 80 triangles.
+  </figcaption>
+</figure>
+
+## What a bigger budget buys
+
+The heuristic was evolved against a hard budget of 80 triangles, but it never
+hard-codes that number: it reads the slot index `t` and the total `n_total`,
+so its coarse-to-fine strategy rescales to any budget. Handing the same frozen
+function 1000 triangles, a budget it never saw during evolution, produces
+this:
+
+<figure>
+  <Image src={budget1000} alt="Three panels: the champion's hummingbird at 80 triangles, a much sharper version at 1000 triangles with visible wing feathers and tail fan, and the target" />
+  <figcaption>
+    The same champion function at 80 and at 1000 triangles. At 1000 it places
+    987 of them, resolves individual wing feathers and the tail fan, and takes
+    the hummingbird from RMSE 0.114 to 0.076. The run takes about 3 seconds.
+  </figcaption>
+</figure>
+
+<figure>
+  <img src={hero1000Gif.src} class="mx-auto" alt="Animated per-triangle build-up of the 1000-triangle hummingbird, from blank canvas through tonal blocks to a feathered bird" />
+  <figcaption>
+    The same run, triangle by triangle: big tonal blocks, then the silhouette,
+    then feathers.
+  </figcaption>
+</figure>
+
+## Did it generalise?
+
+The orange line in the fitness curve is the honest one: two images the model
+never saw, scored only on accepted generations. They improved from 0.251 to
+0.177 mean RMSE, tracking the training curve the whole way down. No
+overfitting to the three training compositions, which is what the multi-image
+fitness was designed to force: image-specific tricks simply do not pay.
+
+## The evolution loop is the simple part
+
+Worth being honest about the search itself: it is close to the simplest thing
+that could work. A population of six programs, four candidates per generation
+on a temperature ladder, strict keep-the-best selection, and two scripted
+escape hatches when progress stalls (a bold-rewrite prompt, and one candidate
+restarted from the naive baseline). That simplicity is visible in the fitness
+curve. Both long plateaus are the population converging to near-clones of the
+incumbent, and both times it took the scripted diversity injection, not the
+selection pressure, to break out.
+
+The serious versions of this recipe search much harder. FunSearch ran many
+islands in parallel with migration between them, so diverse lineages survive
+long enough to pay off. AlphaEvolve keeps a quality-diversity archive, so a
+structurally different program is retained even while it loses on raw fitness,
+and it evolves its prompts alongside its programs. Add evaluation cascades,
+crossover between the best programs, and richer feedback (per-image error
+breakdowns rather than one number), and none of it is exotic: each is roughly
+an afternoon of work in this codebase.
+
+That is what makes the result encouraging rather than final. The most naive
+loop I could write, driving a laptop-sized model, still beat the validated
+reference by 14%. Search quality is the cheapest upgrade left on the table,
+and the fitness curve suggests the model had more to give than the loop knew
+how to ask for.
+
+## What made the demo work
+
+My first attempt at this was a string-art task, and it failed as a demo for an
+instructive reason: the greedy baseline already looked good, so there was
+nothing for the audience to watch improve. The lesson generalises. If you
+want an evolution demo to land, **the baseline has to fail visibly**, and the
+gap between baseline and validated reference has to decompose into several
+independently discoverable ideas, each small enough for one generation.
+
+The other load-bearing choices: a metric the model cannot fake (re-verify
+everything from raw outputs), identical evaluation budgets per generation,
+deterministic seeds so every score is reproducible, and feeding failures back
+as prompt context instead of discarding them.
+
+Everything is in the repo, including every generation's prompt, reply,
+candidate code, scores, and canvas:
+[github.com/sachinkahawala/triangle-art](https://github.com/sachinkahawala/triangle-art).
+A full evaluation of one candidate takes about a second on an M-series
+MacBook; the 40-generation run is an overnight job with the 27B model doing
+the thinking. Karpathy's meat computers are doing fine, but it is getting
+genuinely hard to tell where the laptop stops being the limiting factor.
